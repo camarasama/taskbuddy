@@ -1,0 +1,269 @@
+// ============================================================================
+// Email Service
+// Handles email sending using Nodemailer
+// ============================================================================
+
+const nodemailer = require('nodemailer');
+
+// ============================================================================
+// CREATE TRANSPORTER
+// ============================================================================
+const createTransporter = () => {
+  // For development: Use Gmail or other SMTP service
+  // For production: Use a service like SendGrid, AWS SES, etc.
+  
+  return nodemailer.createTransporter({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: process.env.SMTP_PORT || 587,
+    secure: false, // true for 465, false for other ports
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD
+    }
+  });
+};
+
+// ============================================================================
+// SEND EMAIL VERIFICATION
+// ============================================================================
+exports.sendVerificationEmail = async (email, fullName, verificationToken) => {
+  try {
+    const transporter = createTransporter();
+    
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+    
+    const mailOptions = {
+      from: `"TaskBuddy" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: 'Verify Your Email - TaskBuddy',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #4F46E5;">Welcome to TaskBuddy!</h2>
+          <p>Hi ${fullName},</p>
+          <p>Thank you for registering with TaskBuddy. Please verify your email address to get started.</p>
+          <div style="margin: 30px 0;">
+            <a href="${verificationUrl}" 
+               style="background-color: #4F46E5; color: white; padding: 12px 24px; 
+                      text-decoration: none; border-radius: 5px; display: inline-block;">
+              Verify Email
+            </a>
+          </div>
+          <p>Or copy and paste this link into your browser:</p>
+          <p style="color: #6B7280; word-break: break-all;">${verificationUrl}</p>
+          <p style="color: #6B7280; font-size: 12px; margin-top: 30px;">
+            This link will expire in 24 hours. If you didn't create an account with TaskBuddy, 
+            please ignore this email.
+          </p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('Verification email sent to:', email);
+
+  } catch (error) {
+    console.error('Error sending verification email:', error);
+    throw new Error('Failed to send verification email');
+  }
+};
+
+// ============================================================================
+// SEND PASSWORD RESET EMAIL
+// ============================================================================
+exports.sendPasswordResetEmail = async (email, fullName, resetToken) => {
+  try {
+    const transporter = createTransporter();
+    
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    
+    const mailOptions = {
+      from: `"TaskBuddy" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: 'Password Reset Request - TaskBuddy',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #4F46E5;">Password Reset Request</h2>
+          <p>Hi ${fullName},</p>
+          <p>We received a request to reset your password. Click the button below to create a new password:</p>
+          <div style="margin: 30px 0;">
+            <a href="${resetUrl}" 
+               style="background-color: #4F46E5; color: white; padding: 12px 24px; 
+                      text-decoration: none; border-radius: 5px; display: inline-block;">
+              Reset Password
+            </a>
+          </div>
+          <p>Or copy and paste this link into your browser:</p>
+          <p style="color: #6B7280; word-break: break-all;">${resetUrl}</p>
+          <p style="color: #6B7280; font-size: 12px; margin-top: 30px;">
+            This link will expire in 1 hour. If you didn't request a password reset, 
+            please ignore this email and your password will remain unchanged.
+          </p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('Password reset email sent to:', email);
+
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    throw new Error('Failed to send password reset email');
+  }
+};
+
+// ============================================================================
+// SEND TASK NOTIFICATION EMAIL
+// ============================================================================
+exports.sendTaskNotificationEmail = async (email, fullName, taskTitle, notificationType) => {
+  try {
+    const transporter = createTransporter();
+    
+    let subject, message;
+    
+    switch (notificationType) {
+      case 'task_assigned':
+        subject = 'New Task Assigned - TaskBuddy';
+        message = `You have been assigned a new task: "${taskTitle}". Log in to TaskBuddy to view the details.`;
+        break;
+      case 'task_approved':
+        subject = 'Task Approved - TaskBuddy';
+        message = `Great job! Your task "${taskTitle}" has been approved. You've earned points!`;
+        break;
+      case 'task_rejected':
+        subject = 'Task Needs Revision - TaskBuddy';
+        message = `Your task "${taskTitle}" needs some improvements. Please check the feedback and resubmit.`;
+        break;
+      case 'deadline_reminder':
+        subject = 'Task Deadline Reminder - TaskBuddy';
+        message = `Reminder: Your task "${taskTitle}" is due soon. Don't forget to complete it!`;
+        break;
+      default:
+        return;
+    }
+    
+    const mailOptions = {
+      from: `"TaskBuddy" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: subject,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #4F46E5;">TaskBuddy Notification</h2>
+          <p>Hi ${fullName},</p>
+          <p>${message}</p>
+          <div style="margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL}/dashboard" 
+               style="background-color: #4F46E5; color: white; padding: 12px 24px; 
+                      text-decoration: none; border-radius: 5px; display: inline-block;">
+              View Dashboard
+            </a>
+          </div>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('Task notification email sent to:', email);
+
+  } catch (error) {
+    console.error('Error sending task notification email:', error);
+    // Don't throw error for notification emails
+  }
+};
+
+// ============================================================================
+// SEND REWARD NOTIFICATION EMAIL
+// ============================================================================
+exports.sendRewardNotificationEmail = async (email, fullName, rewardName, notificationType) => {
+  try {
+    const transporter = createTransporter();
+    
+    let subject, message;
+    
+    switch (notificationType) {
+      case 'reward_approved':
+        subject = 'Reward Approved - TaskBuddy';
+        message = `Congratulations! Your reward redemption for "${rewardName}" has been approved!`;
+        break;
+      case 'reward_denied':
+        subject = 'Reward Request Denied - TaskBuddy';
+        message = `Your reward redemption request for "${rewardName}" was not approved. Please check the feedback.`;
+        break;
+      default:
+        return;
+    }
+    
+    const mailOptions = {
+      from: `"TaskBuddy" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: subject,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #4F46E5;">TaskBuddy Notification</h2>
+          <p>Hi ${fullName},</p>
+          <p>${message}</p>
+          <div style="margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL}/dashboard" 
+               style="background-color: #4F46E5; color: white; padding: 12px 24px; 
+                      text-decoration: none; border-radius: 5px; display: inline-block;">
+              View Dashboard
+            </a>
+          </div>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('Reward notification email sent to:', email);
+
+  } catch (error) {
+    console.error('Error sending reward notification email:', error);
+    // Don't throw error for notification emails
+  }
+};
+
+// ============================================================================
+// SEND WELCOME EMAIL
+// ============================================================================
+exports.sendWelcomeEmail = async (email, fullName) => {
+  try {
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: `"TaskBuddy" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: 'Welcome to TaskBuddy!',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #4F46E5;">Welcome to TaskBuddy!</h2>
+          <p>Hi ${fullName},</p>
+          <p>Your email has been verified successfully. You can now start using TaskBuddy to manage family activities!</p>
+          <p>Here's what you can do:</p>
+          <ul style="line-height: 1.8;">
+            <li>Create and assign tasks to family members</li>
+            <li>Track task completion with photo verification</li>
+            <li>Award points for completed tasks</li>
+            <li>Set up rewards for motivation</li>
+            <li>Generate family activity reports</li>
+          </ul>
+          <div style="margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL}/dashboard" 
+               style="background-color: #4F46E5; color: white; padding: 12px 24px; 
+                      text-decoration: none; border-radius: 5px; display: inline-block;">
+              Go to Dashboard
+            </a>
+          </div>
+          <p style="color: #6B7280; font-size: 12px; margin-top: 30px;">
+            Need help? Contact us at support@taskbuddy.com
+          </p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('Welcome email sent to:', email);
+
+  } catch (error) {
+    console.error('Error sending welcome email:', error);
+    // Don't throw error for welcome emails
+  }
+};

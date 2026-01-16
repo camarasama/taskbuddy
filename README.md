@@ -1,229 +1,515 @@
-# TaskBuddy: A Web-Based Family Activity Planning System
+# TaskBuddy - Family Activity Planning System
 
-## Project Overview
-TaskBuddy is a comprehensive family activity management platform designed to enhance child engagement and household responsibility through structured task assignment, monitoring, and a reward-based motivation system.
+[![Status](https://img.shields.io/badge/Status-Phase%203%20Complete-success)](https://github.com/camarasama/taskbuddy)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue)](https://www.postgresql.org)
+[![License](https://img.shields.io/badge/License-Academic-orange)](LICENSE)
 
-**Academic Project by:** Souleymane Camara - BIT1007326  
-**Institution:** Regional Maritime University, Faculty of Engineering  
-**Department:** Information Communication Technology  
-**Program:** BSc Information Technology
+A comprehensive web-based family activity planning system designed to enhance child engagement and household responsibility through structured task management and reward systems.
 
-## Project Vision
-To empower families with a digital solution that promotes responsibility, autonomy, and collaboration in household management, specifically targeting children aged 10-16 years.
-
-## Key Features
-
-### User Roles
-- **Admin**: System oversight and management
-- **Parent**: Primary account holder, task creator, reviewer
-- **Spouse**: Co-parent with similar privileges as parent
-- **Child**: Task recipient, photo uploader, reward redeemer
-
-### Core Functionality
-1. **Task Management**
-   - Create tasks with detailed specifications
-   - Photo upload requirements for task verification
-   - Recurring task scheduling
-   - Priority levels and deadline tracking
-   - Category/tag organization
-
-2. **Review System**
-   - Photo-based task verification
-   - Approval/rejection workflow
-   - Comment and feedback mechanism
-   - Resubmission capability
-
-3. **Reward System**
-   - Points-based motivation
-   - Custom reward creation
-   - Redemption request workflow
-   - Availability management
-
-4. **Notification System**
-   - In-app notifications
-   - Email notifications
-   - Real-time updates via Socket.io
-
-5. **Reporting & Analytics**
-   - Child performance tracking
-   - Task completion analytics
-   - Reward redemption reports
-   - Family activity summaries
-
-## Technology Stack
-
-### Frontend
-- **Framework**: React.js with Vite
-- **Styling**: Tailwind CSS + DaisyUI
-- **HTTP Client**: Axios
-- **Routing**: React Router
-- **State Management**: React Context API
-
-### Backend
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Database**: PostgreSQL
-- **Authentication**: JWT (JSON Web Tokens)
-- **File Upload**: Multer
-- **Email Service**: Nodemailer
-- **Real-time**: Socket.io
-
-### Development Tools
-- **Version Control**: Git/GitHub
-- **API Testing**: Postman
-- **IDE**: VS Code
-
-## Project Structure
-```
-TaskBuddy/
-│
-├── frontend/                 # React application
-│   ├── public/
-│   ├── src/
-│   │   ├── components/      # Reusable UI components
-│   │   ├── pages/           # Parent, Child, Admin dashboards
-│   │   ├── services/        # API calls
-│   │   ├── context/         # State management
-│   │   ├── utils/           # Helper functions
-│   │   └── App.jsx
-│   └── package.json
-│
-├── backend/                  # Node.js + Express API
-│   ├── config/              # Database configuration
-│   ├── controllers/         # Business logic
-│   ├── models/              # Database models
-│   ├── routes/              # API endpoints
-│   ├── middleware/          # Auth & validation
-│   ├── uploads/             # Photo storage
-│   └── server.js
-│
-├── database/
-│   └── schema.sql           # Database structure
-│
-└── README.md
-```
-
-## Development Phases
-
-### Phase 1: Project Setup & Database Design ✅
-- Project initialization
-- Database schema design
-- Development environment setup
-
-### Phase 2: Backend Development
-- API development
-- Authentication system
-- File upload handling
-- Email notifications
-
-### Phase 3: Frontend Development
-- User interfaces
-- Role-based dashboards
-- Component development
-
-### Phase 4: Integration & Testing
-- Frontend-backend integration
-- System testing
-- Bug fixes
-
-### Phase 5: Deployment & Documentation
-- Production deployment
-- User documentation
-- Final report
-
-## Installation & Setup
-
-### Prerequisites
-- Node.js (v18 or higher)
-- PostgreSQL (v14 or higher)
-- Git
-- npm or yarn
-
-### Backend Setup
-```bash
-# Navigate to backend directory
-cd backend
-
-# Install dependencies
-npm install
-
-# Configure environment variables
-cp .env.example .env
-# Edit .env with your database credentials
-
-# Run database migrations
-npm run migrate
-
-# Start development server
-npm run dev
-```
-
-### Frontend Setup
-```bash
-# Navigate to frontend directory
-cd frontend
-
-# Install dependencies
-npm install
-
-# Configure environment variables
-cp .env.example .env
-# Edit .env with API endpoint
-
-# Start development server
-npm run dev
-```
-
-## Database Schema
-The database consists of the following main tables:
-- **users**: Stores all user accounts (admin, parent, spouse, child)
-- **families**: Family grouping and relationships
-- **tasks**: Task definitions and assignments
-- **task_submissions**: Photo uploads and completion records
-- **rewards**: Available rewards catalog
-- **reward_redemptions**: Redemption requests and history
-- **notifications**: System notifications
-- **points_log**: Points transaction history
-
-## API Documentation
-API endpoints follow RESTful conventions:
-- `/api/auth/*` - Authentication & registration
-- `/api/tasks/*` - Task management
-- `/api/rewards/*` - Reward system
-- `/api/notifications/*` - Notification handling
-- `/api/reports/*` - Analytics and reports
-
-## Research Context
-
-### Problem Statement
-Families lack specialized digital tools for parent-child collaboration in household management, resulting in reduced motivation and limited child participation in household responsibilities.
-
-### Research Objectives
-1. Design an interactive platform for task assignment and monitoring
-2. Integrate motivational reward systems
-3. Implement secure, role-based access control
-
-### Significance
-- **For Families**: Structured tool for collaboration
-- **For Children**: Encourages responsibility and autonomy
-- **For Research**: Contributes to family-centered digital platform knowledge
-- **For Society**: Develops disciplined, independent individuals
-
-## Target Audience
-- Primary: Families with children aged 10-16 years
-- Geographic Focus: Ghana (aligned with ICT access statistics)
-
-## Contributing
-This is an academic project. For questions or suggestions, please contact the project author.
-
-## License
-This project is developed for academic purposes at Regional Maritime University.
-
-## Contact
-**Developer**: Souleymane Camara  
-**Student ID**: BIT1007326  
+**Academic Project** - BSc Information Technology Final Year Project  
+**Student**: Souleymane Camara (BIT1007326)  
 **Institution**: Regional Maritime University  
 **Department**: Information Communication Technology
 
 ---
-**Last Updated**: January 2026
+
+## 📋 Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [Installation](#installation)
+- [Environment Setup](#environment-setup)
+- [Database Setup](#database-setup)
+- [Running the Application](#running-the-application)
+- [API Documentation](#api-documentation)
+- [Development Progress](#development-progress)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## 🎯 Overview
+
+TaskBuddy is designed to help families (especially those with children aged 10-16) manage household activities collaboratively. The system provides:
+
+- **Task Management**: Create, assign, and track household tasks
+- **Photo Verification**: Ensure task completion with photo evidence
+- **Points & Rewards**: Motivate children through gamification
+- **Real-time Notifications**: Keep everyone updated instantly
+- **Family Analytics**: Track performance and engagement
+
+### Problem Statement
+
+Traditional household management methods (verbal reminders, paper charts) lack:
+- Accountability and verification
+- Child-focused motivation systems
+- Real-time progress tracking
+- Family-wide visibility
+
+TaskBuddy addresses these gaps with a modern, digital solution.
+
+---
+
+## ✨ Features
+
+### User Management
+- ✅ Role-based access (Admin, Parent, Spouse, Child)
+- ✅ Email verification and password reset
+- ✅ Profile management with avatar upload
+- ✅ JWT-based authentication
+
+### Family Management
+- ✅ Create and manage family groups
+- ✅ Unique family codes for invitations
+- ✅ Add children and spouse accounts
+- ✅ Family member role assignment
+
+### Task System
+- ✅ Task creation with categories and priorities
+- ✅ Photo verification requirements
+- ✅ Recurring task schedules
+- ✅ Deadline management
+- ✅ Task assignment to children
+
+### Assignment & Review
+- ✅ Task submission with photo upload
+- ✅ Parent/Spouse approval workflow
+- ✅ Rejection with feedback
+- ✅ Resubmission capability
+- ✅ Overdue task tracking
+
+### Points & Rewards
+- ✅ Points awarded for completed tasks
+- ✅ Reward catalog management
+- ✅ Redemption request system
+- ✅ Points transaction history
+- ✅ Family leaderboard
+
+### Notifications
+- ✅ In-app notifications
+- ✅ Email notifications
+- ✅ Real-time updates (Socket.io)
+- ✅ Deadline reminders
+- ✅ Task and reward alerts
+
+### Reports & Analytics
+- ✅ Child performance reports
+- ✅ Task completion analytics
+- ✅ Reward redemption reports
+- ✅ Family activity summaries
+- ✅ Parent activity logs
+
+---
+
+## 🛠️ Technology Stack
+
+### Backend
+- **Runtime**: Node.js 18+
+- **Framework**: Express.js
+- **Database**: PostgreSQL 14+
+- **Authentication**: JWT + bcrypt
+- **Real-time**: Socket.io
+- **Email**: Nodemailer
+- **File Upload**: Multer
+- **Validation**: express-validator
+
+### Frontend (Coming in Phase 5)
+- **Framework**: React 18 with Vite
+- **Styling**: Tailwind CSS + DaisyUI
+- **State Management**: React Context API
+- **HTTP Client**: Axios
+- **Routing**: React Router v6
+
+### Development Tools
+- **Version Control**: Git/GitHub
+- **API Testing**: Postman
+- **Database Tool**: pgAdmin / TablePlus
+- **IDE**: VS Code
+
+---
+
+## 📁 Project Structure
+
+```
+taskbuddy/
+├── backend/
+│   ├── app.js                      # Main application entry
+│   ├── config/
+│   │   └── database.js             # Database configuration
+│   ├── controllers/                # Business logic (10 files)
+│   │   ├── auth.controller.js
+│   │   ├── user.controller.js
+│   │   ├── family.controller.js
+│   │   ├── task.controller.js
+│   │   ├── assignment.controller.js
+│   │   ├── reward.controller.js
+│   │   ├── redemption.controller.js
+│   │   ├── notification.controller.js
+│   │   ├── points.controller.js
+│   │   └── report.controller.js
+│   ├── routes/                     # API routes (10 files)
+│   │   ├── auth.routes.js
+│   │   ├── user.routes.js
+│   │   ├── family.routes.js
+│   │   ├── task.routes.js
+│   │   ├── assignment.routes.js
+│   │   ├── reward.routes.js
+│   │   ├── redemption.routes.js
+│   │   ├── notification.routes.js
+│   │   ├── points.routes.js
+│   │   └── report.routes.js
+│   ├── middleware/                 # Middleware (4 files)
+│   │   ├── auth.middleware.js
+│   │   ├── role.middleware.js
+│   │   ├── validator.middleware.js
+│   │   └── upload.middleware.js
+│   ├── services/                   # Business services (4 files)
+│   │   ├── email.service.js
+│   │   ├── notification.service.js
+│   │   ├── points.service.js
+│   │   └── task.service.js
+│   ├── utils/                      # Utilities (3 files)
+│   │   ├── helpers.js
+│   │   ├── constants.js
+│   │   └── validation.schemas.js
+│   ├── models/                     # Database models (Phase 2)
+│   └── uploads/                    # Uploaded files
+├── database/
+│   └── schema.sql                  # Database schema
+├── .env.example                    # Environment variables template
+├── .gitignore                      # Git ignore file
+├── package.json                    # Dependencies
+└── README.md                       # This file
+```
+
+---
+
+## 🚀 Installation
+
+### Prerequisites
+
+- Node.js 18 or higher
+- PostgreSQL 14 or higher
+- npm or yarn
+- Git
+
+### Clone Repository
+
+```bash
+git clone https://github.com/camarasama/taskbuddy.git
+cd taskbuddy
+```
+
+### Install Dependencies
+
+```bash
+cd backend
+npm install
+```
+
+---
+
+## ⚙️ Environment Setup
+
+1. Copy the environment template:
+
+```bash
+cp .env.example .env
+```
+
+2. Edit `.env` with your configuration:
+
+```env
+# Server Configuration
+NODE_ENV=development
+PORT=5000
+FRONTEND_URL=http://localhost:3000
+
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=taskbuddy
+DB_USER=your_username
+DB_PASSWORD=your_password
+
+# JWT Configuration
+JWT_SECRET=your_super_secret_jwt_key_min_32_chars
+JWT_REFRESH_SECRET=your_refresh_secret_min_32_chars
+JWT_EXPIRES_IN=24h
+
+# Email Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+
+# Feature Flags
+ENABLE_SCHEDULED_TASKS=true
+```
+
+### Generate JWT Secrets
+
+```bash
+# Generate random secrets
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+---
+
+## 🗄️ Database Setup
+
+### 1. Create Database
+
+```bash
+createdb taskbuddy
+```
+
+Or using psql:
+
+```sql
+CREATE DATABASE taskbuddy;
+```
+
+### 2. Run Schema
+
+```bash
+psql -U your_username -d taskbuddy -f database/schema.sql
+```
+
+Or:
+
+```sql
+\i database/schema.sql
+```
+
+The schema includes:
+- 11 tables with proper relationships
+- Indexes for performance
+- Views for common queries
+- Triggers for automatic updates
+- Sample data (optional)
+
+---
+
+## ▶️ Running the Application
+
+### Development Mode
+
+```bash
+cd backend
+npm run dev
+```
+
+The server will start on `http://localhost:5000`
+
+### Production Mode
+
+```bash
+cd backend
+npm start
+```
+
+### Check Health
+
+Visit: `http://localhost:5000/api/health`
+
+Response:
+```json
+{
+  "success": true,
+  "message": "TaskBuddy API is running",
+  "timestamp": "2026-01-16T15:00:00.000Z",
+  "environment": "development"
+}
+```
+
+---
+
+## 📚 API Documentation
+
+### Base URL
+
+```
+http://localhost:5000/api
+```
+
+### API Endpoints (134 total)
+
+#### Authentication (10 endpoints)
+- `POST /auth/register` - Register new user
+- `POST /auth/login` - User login
+- `POST /auth/verify-email` - Verify email
+- `POST /auth/forgot-password` - Request password reset
+- `POST /auth/reset-password` - Reset password
+- `GET /auth/me` - Get current user
+- `POST /auth/logout` - Logout
+- And more...
+
+#### Users (9 endpoints)
+- `GET /users/profile` - Get profile
+- `PUT /users/profile` - Update profile
+- `POST /users/profile/avatar` - Upload avatar
+- And more...
+
+#### Families (14 endpoints)
+- `POST /families` - Create family
+- `GET /families` - Get user's families
+- `POST /families/join` - Join with code
+- `GET /families/:id/members` - Get members
+- And more...
+
+#### Tasks (11 endpoints)
+- `POST /tasks` - Create task
+- `GET /tasks` - Get tasks (with filters)
+- `PUT /tasks/:id` - Update task
+- `DELETE /tasks/:id` - Delete task
+- And more...
+
+#### Assignments (16 endpoints)
+- `POST /assignments` - Assign task
+- `PATCH /assignments/:id/start` - Start task
+- `POST /assignments/:id/submit` - Submit task
+- `POST /assignments/:id/review` - Review task
+- And more...
+
+#### Rewards (12 endpoints)
+- `POST /rewards` - Create reward
+- `GET /rewards` - Get rewards
+- `POST /rewards/:id/image` - Upload image
+- And more...
+
+#### Redemptions (13 endpoints)
+- `POST /redemptions` - Request redemption
+- `GET /redemptions/my-requests` - My requests
+- `POST /redemptions/:id/review` - Review request
+- And more...
+
+#### Notifications (13 endpoints)
+- `GET /notifications` - Get notifications
+- `GET /notifications/unread` - Get unread
+- `PATCH /notifications/:id/read` - Mark as read
+- And more...
+
+#### Points (15 endpoints)
+- `GET /points/balance` - Get balance
+- `GET /points/history` - Get history
+- `POST /points/adjust` - Adjust points
+- `GET /points/leaderboard/:familyId` - Leaderboard
+- And more...
+
+#### Reports (21 endpoints)
+- `GET /reports/child-performance/:childId` - Performance report
+- `GET /reports/task-analytics/:familyId` - Task analytics
+- `GET /reports/family-summary/:familyId` - Family summary
+- And more...
+
+For complete API documentation, see `/docs` (coming soon).
+
+---
+
+## 📊 Development Progress
+
+### ✅ Phase 1: Project Setup & Database Design (Complete)
+- [x] Project structure setup
+- [x] Database schema design
+- [x] ER diagram
+- [x] Documentation
+
+### ✅ Phase 2: Database Models (Complete)
+- [x] PostgreSQL models
+- [x] Database connection
+- [x] Model relationships
+
+### ✅ Phase 3: Backend API (Complete) - **Current Phase**
+- [x] 134 REST API endpoints
+- [x] JWT authentication
+- [x] Role-based access control
+- [x] File upload handling
+- [x] Email notifications
+- [x] Real-time notifications (Socket.io)
+- [x] Points management
+- [x] Comprehensive validation
+
+### ⏳ Phase 4: Testing & Documentation (Next)
+- [ ] API testing with Postman
+- [ ] Unit tests
+- [ ] Integration tests
+- [ ] API documentation
+
+### ⏳ Phase 5: Frontend Development
+- [ ] React setup with Vite
+- [ ] Authentication pages
+- [ ] Parent dashboard
+- [ ] Child dashboard
+- [ ] Admin dashboard
+
+### ⏳ Phase 6: Integration
+- [ ] Frontend-Backend integration
+- [ ] End-to-end testing
+- [ ] Bug fixes
+
+### ⏳ Phase 7: Deployment
+- [ ] Production environment setup
+- [ ] Backend deployment
+- [ ] Frontend deployment
+- [ ] Domain & SSL
+
+### ⏳ Phase 8: Final Report
+- [ ] Complete project documentation
+- [ ] User manual
+- [ ] Technical documentation
+- [ ] Presentation materials
+
+---
+
+## 🤝 Contributing
+
+This is an academic project. Contributions, suggestions, and feedback are welcome!
+
+### Development Guidelines
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is an academic work submitted as part of the BSc Information Technology program at Regional Maritime University. All rights reserved.
+
+---
+
+## 👨‍🎓 Author
+
+**Souleymane Camara**  
+Student ID: BIT1007326  
+Department of Information Communication Technology  
+Regional Maritime University  
+Email: souleymane.camara@st.rmu.edu.gh
+
+---
+
+## 🙏 Acknowledgments
+
+- Regional Maritime University
+- Project Supervisor: Isaac Acheampong / Harry-Johnson Agyemang 
+- Department of Information Communication Technology
+- Family and friends for support
+
+---
+
+## 📞 Support
+
+For questions or issues:
+- Create an issue on GitHub
+- Contact: souleymane.camara@st.rmu.edu.gh
+
+---
+
+**Built with ❤️ for families everywhere**
