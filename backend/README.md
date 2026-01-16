@@ -55,21 +55,85 @@ TaskBuddy is a comprehensive family task management system designed to enhance c
 
 ```
 backend/
-├── config/
-│   ├── database.js          # PostgreSQL connection
-│   └── email.js             # Nodemailer configuration
-├── controllers/             # Business logic
-├── models/                  # Database models
-├── routes/                  # API endpoints
-├── middleware/
-│   ├── auth.js             # JWT authentication
-│   ├── validation.js       # Request validation
-│   ├── upload.js           # File upload handling
-│   └── errorHandler.js     # Error management
-├── uploads/                 # File storage
-├── server.js               # Application entry point
-├── package.json
-└── .env.example            # Environment variables template
+├── config/                     # Configuration files
+│   ├── database.js             # Database connection settings
+│   └── email.js                # Email service configuration
+├── controllers/                # Request handlers (API logic)
+│   ├── analytics.controller.js
+│   ├── assignment.controller.js
+│   ├── auth.controller.js
+│   ├── export.controller.js
+│   ├── family.controller.js
+│   ├── notification.controller.js
+│   ├── points.controller.js
+│   ├── redemption.controller.js
+│   ├── report.controller.js
+│   ├── reward.controller.js
+│   ├── task.controller.js
+│   └── user.controller.js
+├── database/                   # Database resources
+│   ├── queries/                # Raw SQL queries for analytics
+│   │   ├── childPerformance.queries.js
+│   │   ├── familySummary.queries.js
+│   │   ├── parentActivity.queries.js
+│   │   ├── rewardAnalytics.queries.js
+│   │   └── taskAnalytics.queries.js
+│   └── schema.sql              # Database schema definitions
+├── middleware/                 # Express middleware
+│   ├── auth.middleware.js      # JWT authentication
+│   ├── errorHandler.middleware.js
+│   ├── role.middleware.js      # RBAC checks
+│   ├── upload.middleware.js    # Multer configuration
+│   └── validator.middleware.js # Input validation
+├── models/                     # Sequelize models
+│   ├── FamilyMemberModel.js
+│   ├── FamilyModel.js
+│   ├── NotificationModel.js
+│   ├── PointsLogModel.js
+│   ├── RegistrationSessionModel.js
+│   ├── RewardModel.js
+│   ├── RewardRedemptionModel.js
+│   ├── TaskAssignmentModel.js
+│   ├── TaskModel.js
+│   ├── TaskSubmissionModel.js
+│   ├── UserModel.js
+│   └── index.js                # Model associations
+├── routes/                     # API route definitions
+│   ├── Assignment.routes.js
+│   ├── Auth.routes.js
+│   ├── Family.routes.js
+│   ├── Notification.routes.js
+│   ├── Points.routes.js
+│   ├── Redemption.routes.js
+│   ├── Report.routes.js
+│   ├── Reward.routes.js
+│   ├── Task.routes.js
+│   ├── User.routes.js
+│   ├── analytics.routes.js
+│   ├── export.routes.js
+│   └── index.js                # Main router entry point
+├── scripts/                    # Utility scripts
+│   ├── clean-expired-sessions.js
+│   ├── setup-database.js
+│   └── test-connection.js
+├── services/                   # Business logic layer
+│   ├── analytics.service.js
+│   ├── email.service.js
+│   ├── export.service.js
+│   ├── notification.service.js
+│   ├── points.service.js
+│   ├── report.service.js
+│   └── task.service.js
+├── utils/                      # Helpers and constants
+│   ├── chartDataFormatter.js
+│   ├── constants.js
+│   ├── dateRangeHelper.js
+│   ├── helpers.js
+│   ├── reportFormatters.js
+│   └── validation.schemas.js
+├── app.js                      # Express app setup
+├── server.js                   # Server entry point
+└── package.json
 ```
 
 ## 🔧 Installation & Setup
