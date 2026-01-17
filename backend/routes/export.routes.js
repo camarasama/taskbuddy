@@ -9,6 +9,13 @@ const router = express.Router();
 const exportController = require('../controllers/export.controller');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
+// Import validators from Phase 4
+const {
+  validateExportCSV,
+  validateExportPDF,
+  validateDownloadFile
+} = require('../validators/report.validator');
+
 // ==========================================================================
 // CSV EXPORT ROUTES
 // ==========================================================================
@@ -23,6 +30,7 @@ router.post(
   '/csv/child-performance',
   authenticateToken,
   authorizeRoles('parent', 'spouse', 'admin'),
+  validateExportCSV,
   exportController.exportChildPerformanceToCSV
 );
 
@@ -36,6 +44,7 @@ router.post(
   '/csv/task-analytics',
   authenticateToken,
   authorizeRoles('parent', 'spouse', 'admin'),
+  validateExportCSV,
   exportController.exportTaskAnalyticsToCSV
 );
 
@@ -49,6 +58,7 @@ router.post(
   '/csv/reward-analytics',
   authenticateToken,
   authorizeRoles('parent', 'spouse', 'admin'),
+  validateExportCSV,
   exportController.exportRewardAnalyticsToCSV
 );
 
@@ -62,6 +72,7 @@ router.post(
   '/csv/family-summary',
   authenticateToken,
   authorizeRoles('parent', 'spouse', 'admin'),
+  validateExportCSV,
   exportController.exportFamilySummaryToCSV
 );
 
@@ -79,6 +90,7 @@ router.post(
   '/pdf/child-performance',
   authenticateToken,
   authorizeRoles('parent', 'spouse', 'admin'),
+  validateExportPDF,
   exportController.exportChildPerformanceToPDF
 );
 
@@ -92,6 +104,7 @@ router.post(
   '/pdf/task-analytics',
   authenticateToken,
   authorizeRoles('parent', 'spouse', 'admin'),
+  validateExportPDF,
   exportController.exportTaskAnalyticsToPDF
 );
 
@@ -105,6 +118,7 @@ router.post(
   '/pdf/family-summary',
   authenticateToken,
   authorizeRoles('parent', 'spouse', 'admin'),
+  validateExportPDF,
   exportController.exportFamilySummaryToPDF
 );
 
@@ -121,6 +135,7 @@ router.get(
   '/download/:filename',
   authenticateToken,
   authorizeRoles('parent', 'spouse', 'admin'),
+  validateDownloadFile,
   exportController.downloadFile
 );
 

@@ -43,13 +43,25 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API Routes (will be added)
-// app.use('/api/auth', require('./routes/authRoutes'));
-// app.use('/api/users', require('./routes/userRoutes'));
-// app.use('/api/tasks', require('./routes/taskRoutes'));
-// app.use('/api/rewards', require('./routes/rewardRoutes'));
-// app.use('/api/notifications', require('./routes/notificationRoutes'));
-// app.use('/api/reports', require('./routes/reportRoutes'));
+// ============================================================================
+// API ROUTES - Phase 3 & 4 Integration
+// ============================================================================
+
+// Phase 3: Core API Routes
+app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/users', require('./routes/user.routes'));
+app.use('/api/families', require('./routes/family.routes'));
+app.use('/api/tasks', require('./routes/task.routes'));
+app.use('/api/assignments', require('./routes/assignment.routes'));
+app.use('/api/rewards', require('./routes/reward.routes'));
+app.use('/api/redemptions', require('./routes/redemption.routes'));
+app.use('/api/notifications', require('./routes/notification.routes'));
+app.use('/api/points', require('./routes/points.routes'));
+
+// Phase 4: Reports & Analytics Routes
+app.use('/api/reports', require('./routes/report.routes'));
+app.use('/api/analytics', require('./routes/analytics.routes'));
+app.use('/api/export', require('./routes/export.routes'));
 
 // Socket.io connection handling
 io.on('connection', (socket) => {

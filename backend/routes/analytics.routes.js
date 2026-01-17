@@ -9,6 +9,14 @@ const router = express.Router();
 const analyticsController = require('../controllers/analytics.controller');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
+// Import validators from Phase 4
+const {
+  validatePerformanceScore,
+  validateFamilyEngagement,
+  validatePerformanceTrend,
+  validateMonthlyTrendChart
+} = require('../validators/report.validator');
+
 // ==========================================================================
 // PERFORMANCE CALCULATIONS
 // ==========================================================================
@@ -23,6 +31,7 @@ router.get(
   '/performance-score',
   authenticateToken,
   authorizeRoles('parent', 'spouse', 'admin'),
+  validatePerformanceScore,
   analyticsController.calculatePerformanceScore
 );
 
@@ -36,6 +45,7 @@ router.get(
   '/family-engagement',
   authenticateToken,
   authorizeRoles('parent', 'spouse', 'admin'),
+  validateFamilyEngagement,
   analyticsController.calculateFamilyEngagement
 );
 
@@ -53,6 +63,7 @@ router.get(
   '/performance-trend',
   authenticateToken,
   authorizeRoles('parent', 'spouse', 'admin'),
+  validatePerformanceTrend,
   analyticsController.analyzePerformanceTrend
 );
 
@@ -142,6 +153,7 @@ router.get(
 router.get(
   '/charts/monthly-trend',
   authenticateToken,
+  validateMonthlyTrendChart,
   analyticsController.getMonthlyTrendChartData
 );
 

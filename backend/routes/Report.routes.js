@@ -9,6 +9,15 @@ const reportController = require('../controllers/report.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/role.middleware');
 
+// Import validators from Phase 4
+const {
+  validateChildPerformanceReport,
+  validateTaskAnalyticsReport,
+  validateRewardAnalyticsReport,
+  validateFamilySummaryReport,
+  validateParentActivityReport
+} = require('../validators/report.validator');
+
 // ============================================================================
 // CHILD PERFORMANCE REPORTS
 // ============================================================================
@@ -19,7 +28,12 @@ const { requireRole } = require('../middleware/role.middleware');
  * @access  Private (Child can view own, Parent/Spouse can view any)
  * @query   startDate, endDate, period (week/month/year)
  */
-router.get('/child-performance/:childId', authenticate, reportController.getChildPerformanceReport);
+router.get(
+  '/child-performance/:childId',
+  authenticate,
+  validateChildPerformanceReport,
+  reportController.getChildPerformanceReport
+);
 
 /**
  * @route   GET /api/reports/child-performance/:childId/summary
@@ -46,7 +60,13 @@ router.get('/child-performance/:childId/trends', authenticate, reportController.
  * @access  Private/Parent/Spouse
  * @query   startDate, endDate, category, priority
  */
-router.get('/task-analytics/:familyId', authenticate, requireRole(['parent', 'spouse']), reportController.getTaskAnalytics);
+router.get(
+  '/task-analytics/:familyId',
+  authenticate,
+  requireRole(['parent', 'spouse']),
+  validateTaskAnalyticsReport,
+  reportController.getTaskAnalytics
+);
 
 /**
  * @route   GET /api/reports/task-completion/:familyId
@@ -80,7 +100,13 @@ router.get('/overdue-tasks/:familyId', authenticate, requireRole(['parent', 'spo
  * @access  Private/Parent/Spouse
  * @query   startDate, endDate
  */
-router.get('/reward-redemptions/:familyId', authenticate, requireRole(['parent', 'spouse']), reportController.getRewardRedemptionReport);
+router.get(
+  '/reward-redemptions/:familyId',
+  authenticate,
+  requireRole(['parent', 'spouse']),
+  validateRewardAnalyticsReport,
+  reportController.getRewardRedemptionReport
+);
 
 /**
  * @route   GET /api/reports/popular-rewards/:familyId
@@ -108,7 +134,13 @@ router.get('/reward-trends/:familyId', authenticate, requireRole(['parent', 'spo
  * @access  Private/Parent/Spouse
  * @query   startDate, endDate
  */
-router.get('/family-summary/:familyId', authenticate, requireRole(['parent', 'spouse']), reportController.getFamilyActivitySummary);
+router.get(
+  '/family-summary/:familyId',
+  authenticate,
+  requireRole(['parent', 'spouse']),
+  validateFamilySummaryReport,
+  reportController.getFamilyActivitySummary
+);
 
 /**
  * @route   GET /api/reports/family-dashboard/:familyId
@@ -135,7 +167,13 @@ router.get('/family-engagement/:familyId', authenticate, requireRole(['parent', 
  * @access  Private/Parent/Spouse
  * @query   startDate, endDate
  */
-router.get('/parent-activity/:familyId', authenticate, requireRole(['parent', 'spouse']), reportController.getParentActivityReport);
+router.get(
+  '/parent-activity/:familyId',
+  authenticate,
+  requireRole(['parent', 'spouse']),
+  validateParentActivityReport,
+  reportController.getParentActivityReport
+);
 
 /**
  * @route   GET /api/reports/parent-activity/:parentId/summary
