@@ -7,7 +7,8 @@
 const express = require('express');
 const router = express.Router();
 const exportController = require('../controllers/export.controller');
-const { authenticateToken, authorizeRoles } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth.middleware');
+const { requireRole } = require('../middleware/role.middleware');
 
 // Import validators from Phase 4
 const {
@@ -28,8 +29,8 @@ const {
  */
 router.post(
   '/csv/child-performance',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   validateExportCSV,
   exportController.exportChildPerformanceToCSV
 );
@@ -42,8 +43,8 @@ router.post(
  */
 router.post(
   '/csv/task-analytics',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   validateExportCSV,
   exportController.exportTaskAnalyticsToCSV
 );
@@ -56,8 +57,8 @@ router.post(
  */
 router.post(
   '/csv/reward-analytics',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   validateExportCSV,
   exportController.exportRewardAnalyticsToCSV
 );
@@ -70,8 +71,8 @@ router.post(
  */
 router.post(
   '/csv/family-summary',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   validateExportCSV,
   exportController.exportFamilySummaryToCSV
 );
@@ -88,8 +89,8 @@ router.post(
  */
 router.post(
   '/pdf/child-performance',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   validateExportPDF,
   exportController.exportChildPerformanceToPDF
 );
@@ -102,8 +103,8 @@ router.post(
  */
 router.post(
   '/pdf/task-analytics',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   validateExportPDF,
   exportController.exportTaskAnalyticsToPDF
 );
@@ -116,8 +117,8 @@ router.post(
  */
 router.post(
   '/pdf/family-summary',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   validateExportPDF,
   exportController.exportFamilySummaryToPDF
 );
@@ -133,8 +134,8 @@ router.post(
  */
 router.get(
   '/download/:filename',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   validateDownloadFile,
   exportController.downloadFile
 );
@@ -150,8 +151,8 @@ router.get(
  */
 router.get(
   '/files',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   exportController.listExportedFiles
 );
 
@@ -162,8 +163,8 @@ router.get(
  */
 router.delete(
   '/files/:filename',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   exportController.deleteFile
 );
 
@@ -174,8 +175,8 @@ router.delete(
  */
 router.post(
   '/cleanup',
-  authenticateToken,
-  authorizeRoles('admin'),
+  authenticate,
+  requireRole(['admin']),
   exportController.cleanupOldFiles
 );
 

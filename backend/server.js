@@ -5,7 +5,7 @@ const socketIo = require('socket.io');
 require('dotenv').config();
 
 // Import middleware
-const { errorHandler, notFound } = require('./middleware/errorHandler');
+const { errorHandler, notFound } = require('./middleware/errorHandler.middleware');
 
 // Initialize Express app
 const app = express();
@@ -48,20 +48,20 @@ app.get('/api/health', (req, res) => {
 // ============================================================================
 
 // Phase 3: Core API Routes
-app.use('/api/auth', require('./routes/auth.routes'));
-app.use('/api/users', require('./routes/user.routes'));
-app.use('/api/families', require('./routes/family.routes'));
-app.use('/api/tasks', require('./routes/task.routes'));
-app.use('/api/assignments', require('./routes/assignment.routes'));
-app.use('/api/rewards', require('./routes/reward.routes'));
-app.use('/api/redemptions', require('./routes/redemption.routes'));
-app.use('/api/notifications', require('./routes/notification.routes'));
-app.use('/api/points', require('./routes/points.routes'));
+app.use('/api/auth', require('./routes/Auth.routes'));
+app.use('/api/users', require('./routes/User.routes'));
+app.use('/api/families', require('./routes/Family.routes'));
+app.use('/api/tasks', require('./routes/Task.routes'));
+app.use('/api/assignments', require('./routes/Assignment.routes'));
+app.use('/api/rewards', require('./routes/Reward.routes'));
+app.use('/api/redemptions', require('./routes/Redemption.routes'));
+app.use('/api/notifications', require('./routes/Notification.routes'));
+app.use('/api/points', require('./routes/Points.routes'));
 
 // Phase 4: Reports & Analytics Routes
-app.use('/api/reports', require('./routes/report.routes'));
-app.use('/api/analytics', require('./routes/analytics.routes'));
-app.use('/api/export', require('./routes/export.routes'));
+app.use('/api/reports', require('./routes/Report.routes'));
+app.use('/api/analytics', require('./routes/Analytics.routes'));
+app.use('/api/export', require('./routes/Export.routes'));
 
 // Socket.io connection handling
 io.on('connection', (socket) => {

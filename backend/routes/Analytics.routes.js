@@ -7,7 +7,8 @@
 const express = require('express');
 const router = express.Router();
 const analyticsController = require('../controllers/analytics.controller');
-const { authenticateToken, authorizeRoles } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth.middleware');
+const { requireRole } = require('../middleware/role.middleware');
 
 // Import validators from Phase 4
 const {
@@ -29,8 +30,8 @@ const {
  */
 router.get(
   '/performance-score',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   validatePerformanceScore,
   analyticsController.calculatePerformanceScore
 );
@@ -43,8 +44,8 @@ router.get(
  */
 router.get(
   '/family-engagement',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   validateFamilyEngagement,
   analyticsController.calculateFamilyEngagement
 );
@@ -61,8 +62,8 @@ router.get(
  */
 router.get(
   '/performance-trend',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   validatePerformanceTrend,
   analyticsController.analyzePerformanceTrend
 );
@@ -75,8 +76,8 @@ router.get(
  */
 router.get(
   '/category-performance',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   analyticsController.analyzeCategoryPerformance
 );
 
@@ -92,8 +93,8 @@ router.get(
  */
 router.get(
   '/children-comparison',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   analyticsController.compareChildrenPerformance
 );
 
@@ -105,8 +106,8 @@ router.get(
  */
 router.get(
   '/task-types-comparison',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   analyticsController.compareTaskTypes
 );
 
@@ -122,8 +123,8 @@ router.get(
  */
 router.get(
   '/predict-completion',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   analyticsController.predictTaskCompletion
 );
 
@@ -135,8 +136,8 @@ router.get(
  */
 router.get(
   '/forecast-activity',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   analyticsController.forecastFamilyActivity
 );
 
@@ -152,7 +153,7 @@ router.get(
  */
 router.get(
   '/charts/monthly-trend',
-  authenticateToken,
+  authenticate,
   validateMonthlyTrendChart,
   analyticsController.getMonthlyTrendChartData
 );
@@ -165,8 +166,8 @@ router.get(
  */
 router.get(
   '/charts/category-breakdown',
-  authenticateToken,
-  authorizeRoles('parent', 'spouse', 'admin'),
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
   analyticsController.getCategoryBreakdownChartData
 );
 
@@ -178,7 +179,7 @@ router.get(
  */
 router.get(
   '/charts/performance-radar',
-  authenticateToken,
+  authenticate,
   analyticsController.getPerformanceRadarChartData
 );
 

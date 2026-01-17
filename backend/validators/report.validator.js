@@ -373,10 +373,13 @@ module.exports = {
   validatePerformanceTrend,
   validateTaskCompletionPrediction,
   
-  // Export validators
+  // Export validators (with aliases for backward compatibility)
   validateExportRequest,
   validateChildExportRequest,
   validateDownloadFilename,
+  validateExportCSV: validateExportRequest,           // Alias
+  validateExportPDF: validateExportRequest,           // Alias
+  validateDownloadFile: validateDownloadFilename,     // Alias
   
   // Chart validators
   validateMonthlyTrendChart,
