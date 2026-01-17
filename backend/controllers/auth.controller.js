@@ -1,6 +1,7 @@
 // ============================================================================
-// Authentication Controller
+// Authentication Controller - UPDATED
 // Handles user registration, login, email verification, password reset
+// Changes: Added registerAdmin, modified register to registerParent
 // ============================================================================
 
 const bcrypt = require('bcrypt');
@@ -10,13 +11,14 @@ const emailService = require('../services/email.service');
 const { generateToken, generateRefreshToken } = require('../utils/helpers');
 
 // ============================================================================
-// REGISTER NEW USER
+// REGISTER NEW PARENT (Public Registration)
+// Only parents can self-register through public route
 // ============================================================================
 exports.register = async (req, res) => {
   const client = await pool.connect();
   
   try {
-    const { email, password, full_name, role, date_of_birth, phone_number } = req.body;
+    const { email, password, full_name, date_of_birth, phone_number } = req.body;
 
     await client.query('BEGIN');
 
@@ -34,17 +36,26 @@ exports.register = async (req, res) => {
       });
     }
 
+    // Validate age (must be 18+)
+    const age = calculateAge(date_of_birth);
+    if (age < 18) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'You must be at least 18 years old to register'
+      });
+    }
+
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    // Insert new user (only parent can self-register)
-    const userRole = role || 'parent';
+    // Insert new user (force role to parent)
     const result = await client.query(
       `INSERT INTO users (email, password_hash, full_name, role, date_of_birth, phone_number)
-       VALUES ($1, $2, $3, $4, $5, $6)
+       VALUES ($1, $2, $3, 'parent', $4, $5)
        RETURNING user_id, email, full_name, role, created_at`,
-      [email, password_hash, full_name, userRole, date_of_birth, phone_number]
+      [email, password_hash, full_name, date_of_birth, phone_number]
     );
 
     const user = result.rows[0];
@@ -63,14 +74,12 @@ exports.register = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Registration successful. Please check your email to verify your account.',
-      data: {
-        user: {
-          user_id: user.user_id,
-          email: user.email,
-          full_name: user.full_name,
-          role: user.role
-        }
+      message: 'Registration successful! Please check your email to verify your account.',
+      user: {
+        user_id: user.user_id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role
       }
     });
 
@@ -88,6 +97,82 @@ exports.register = async (req, res) => {
 };
 
 // ============================================================================
+// REGISTER NEW ADMIN (Restricted Route)
+// Only accessible with admin secret key
+// ============================================================================
+exports.registerAdmin = async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const { email, password, full_name, date_of_birth, phone_number } = req.body;
+
+    await client.query('BEGIN');
+
+    // Check if user already exists
+    const existingUser = await client.query(
+      'SELECT user_id FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (existingUser.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists'
+      });
+    }
+
+    // Validate age (must be 18+)
+    const age = calculateAge(date_of_birth);
+    if (age < 18) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Admin must be at least 18 years old'
+      });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+
+    // Insert new admin user (email already verified, account active)
+    const result = await client.query(
+      `INSERT INTO users (email, password_hash, full_name, role, date_of_birth, phone_number, email_verified, is_active)
+       VALUES ($1, $2, $3, 'admin', $4, $5, true, true)
+       RETURNING user_id, email, full_name, role, created_at`,
+      [email, password_hash, full_name, date_of_birth, phone_number]
+    );
+
+    const admin = result.rows[0];
+
+    await client.query('COMMIT');
+
+    res.status(201).json({
+      success: true,
+      message: 'Admin account created successfully',
+      user: {
+        user_id: admin.user_id,
+        email: admin.email,
+        full_name: admin.full_name,
+        role: admin.role
+      }
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Admin registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Admin registration failed',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// ============================================================================
 // LOGIN USER
 // ============================================================================
 exports.login = async (req, res) => {
@@ -96,17 +181,14 @@ exports.login = async (req, res) => {
 
     // Find user by email
     const result = await pool.query(
-      `SELECT user_id, email, password_hash, full_name, role, profile_picture, 
-              email_verified, is_active
-       FROM users 
-       WHERE email = $1`,
+      'SELECT * FROM users WHERE email = $1',
       [email]
     );
 
     if (result.rows.length === 0) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid credentials'
       });
     }
 
@@ -120,21 +202,21 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Check if email is verified
-    if (!user.email_verified) {
+    // Check if email is verified (only for non-admin users)
+    if (user.role !== 'admin' && !user.email_verified) {
       return res.status(403).json({
         success: false,
-        message: 'Please verify your email before logging in.'
+        message: 'Please verify your email before logging in'
       });
     }
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    
+
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid credentials'
       });
     }
 
@@ -145,22 +227,22 @@ exports.login = async (req, res) => {
     );
 
     // Generate tokens
-    const accessToken = generateToken(user);
+    const token = generateToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    res.status(200).json({
+    res.json({
       success: true,
       message: 'Login successful',
-      data: {
-        user: {
-          user_id: user.user_id,
-          email: user.email,
-          full_name: user.full_name,
-          role: user.role,
-          profile_picture: user.profile_picture
-        },
-        accessToken,
-        refreshToken
+      token,
+      refreshToken,
+      user: {
+        user_id: user.user_id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        profile_picture: user.profile_picture,
+        date_of_birth: user.date_of_birth,
+        phone_number: user.phone_number
       }
     });
 
@@ -184,10 +266,10 @@ exports.verifyEmail = async (req, res) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Update user email_verified status
+    // Update user's email_verified status
     const result = await pool.query(
       `UPDATE users 
-       SET email_verified = TRUE, updated_at = CURRENT_TIMESTAMP
+       SET email_verified = true, updated_at = CURRENT_TIMESTAMP 
        WHERE user_id = $1 AND email = $2
        RETURNING user_id, email, full_name`,
       [decoded.user_id, decoded.email]
@@ -196,32 +278,27 @@ exports.verifyEmail = async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'User not found or token invalid'
+        message: 'User not found'
       });
     }
 
-    res.status(200).json({
+    const user = result.rows[0];
+
+    // Send welcome email
+    await emailService.sendWelcomeEmail(user.email, user.full_name);
+
+    res.json({
       success: true,
-      message: 'Email verified successfully. You can now login.',
-      data: {
-        user: result.rows[0]
-      }
+      message: 'Email verified successfully! You can now log in.'
     });
 
   } catch (error) {
     console.error('Email verification error:', error);
-    
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid verification token'
-      });
-    }
-    
+
     if (error.name === 'TokenExpiredError') {
       return res.status(400).json({
         success: false,
-        message: 'Verification token has expired. Please request a new one.'
+        message: 'Verification link has expired. Please request a new one.'
       });
     }
 
@@ -272,7 +349,7 @@ exports.resendVerification = async (req, res) => {
     // Send verification email
     await emailService.sendVerificationEmail(user.email, user.full_name, verificationToken);
 
-    res.status(200).json({
+    res.json({
       success: true,
       message: 'Verification email sent successfully'
     });
@@ -301,18 +378,18 @@ exports.forgotPassword = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      // Don't reveal if user exists or not for security
-      return res.status(200).json({
+      // Don't reveal if user exists
+      return res.json({
         success: true,
-        message: 'If your email is registered, you will receive a password reset link.'
+        message: 'If an account with that email exists, a password reset link has been sent.'
       });
     }
 
     const user = result.rows[0];
 
-    // Generate password reset token
+    // Generate reset token
     const resetToken = jwt.sign(
-      { user_id: user.user_id, email: user.email, purpose: 'password_reset' },
+      { user_id: user.user_id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
@@ -320,9 +397,9 @@ exports.forgotPassword = async (req, res) => {
     // Send password reset email
     await emailService.sendPasswordResetEmail(user.email, user.full_name, resetToken);
 
-    res.status(200).json({
+    res.json({
       success: true,
-      message: 'If your email is registered, you will receive a password reset link.'
+      message: 'If an account with that email exists, a password reset link has been sent.'
     });
 
   } catch (error) {
@@ -340,28 +417,21 @@ exports.forgotPassword = async (req, res) => {
 // ============================================================================
 exports.resetPassword = async (req, res) => {
   try {
-    const { token, newPassword } = req.body;
+    const { token, password } = req.body;
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    if (decoded.purpose !== 'password_reset') {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid reset token'
-      });
-    }
-
     // Hash new password
     const salt = await bcrypt.genSalt(10);
-    const password_hash = await bcrypt.hash(newPassword, salt);
+    const password_hash = await bcrypt.hash(password, salt);
 
     // Update password
     const result = await pool.query(
       `UPDATE users 
-       SET password_hash = $1, updated_at = CURRENT_TIMESTAMP
+       SET password_hash = $1, updated_at = CURRENT_TIMESTAMP 
        WHERE user_id = $2 AND email = $3
-       RETURNING user_id, email, full_name`,
+       RETURNING user_id`,
       [password_hash, decoded.user_id, decoded.email]
     );
 
@@ -372,25 +442,18 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    res.json({
       success: true,
-      message: 'Password reset successful. You can now login with your new password.'
+      message: 'Password reset successfully! You can now log in with your new password.'
     });
 
   } catch (error) {
     console.error('Reset password error:', error);
-    
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid reset token'
-      });
-    }
-    
+
     if (error.name === 'TokenExpiredError') {
       return res.status(400).json({
         success: false,
-        message: 'Reset token has expired. Please request a new one.'
+        message: 'Reset link has expired. Please request a new one.'
       });
     }
 
@@ -407,14 +470,11 @@ exports.resetPassword = async (req, res) => {
 // ============================================================================
 exports.getCurrentUser = async (req, res) => {
   try {
-    const userId = req.user.user_id;
-
     const result = await pool.query(
       `SELECT user_id, email, full_name, role, profile_picture, date_of_birth, 
               phone_number, is_active, email_verified, created_at, last_login
-       FROM users 
-       WHERE user_id = $1`,
-      [userId]
+       FROM users WHERE user_id = $1`,
+      [req.user.user_id]
     );
 
     if (result.rows.length === 0) {
@@ -424,39 +484,35 @@ exports.getCurrentUser = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    res.json({
       success: true,
-      data: {
-        user: result.rows[0]
-      }
+      user: result.rows[0]
     });
 
   } catch (error) {
     console.error('Get current user error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get user information',
+      message: 'Failed to fetch user information',
       error: error.message
     });
   }
 };
 
 // ============================================================================
-// LOGOUT USER
+// LOGOUT
 // ============================================================================
 exports.logout = async (req, res) => {
   try {
-    const userId = req.user.user_id;
-
     // Update last login timestamp
     await pool.query(
       'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE user_id = $1',
-      [userId]
+      [req.user.user_id]
     );
 
-    res.status(200).json({
+    res.json({
       success: true,
-      message: 'Logout successful'
+      message: 'Logged out successfully'
     });
 
   } catch (error) {
@@ -470,17 +526,16 @@ exports.logout = async (req, res) => {
 };
 
 // ============================================================================
-// CHANGE PASSWORD (for logged-in users)
+// CHANGE PASSWORD
 // ============================================================================
 exports.changePassword = async (req, res) => {
   try {
-    const userId = req.user.user_id;
     const { currentPassword, newPassword } = req.body;
 
-    // Get current password hash
+    // Get user's current password hash
     const result = await pool.query(
       'SELECT password_hash FROM users WHERE user_id = $1',
-      [userId]
+      [req.user.user_id]
     );
 
     if (result.rows.length === 0) {
@@ -490,9 +545,11 @@ exports.changePassword = async (req, res) => {
       });
     }
 
+    const user = result.rows[0];
+
     // Verify current password
-    const isPasswordValid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
-    
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password_hash);
+
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -506,13 +563,11 @@ exports.changePassword = async (req, res) => {
 
     // Update password
     await pool.query(
-      `UPDATE users 
-       SET password_hash = $1, updated_at = CURRENT_TIMESTAMP
-       WHERE user_id = $2`,
-      [password_hash, userId]
+      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2',
+      [password_hash, req.user.user_id]
     );
 
-    res.status(200).json({
+    res.json({
       success: true,
       message: 'Password changed successfully'
     });
@@ -521,7 +576,7 @@ exports.changePassword = async (req, res) => {
     console.error('Change password error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to change password',
+      message: 'Password change failed',
       error: error.message
     });
   }
@@ -534,23 +589,16 @@ exports.refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
 
-    if (!refreshToken) {
-      return res.status(400).json({
-        success: false,
-        message: 'Refresh token is required'
-      });
-    }
-
     // Verify refresh token
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-    // Get user details
+    // Get user
     const result = await pool.query(
-      `SELECT user_id, email, full_name, role, is_active FROM users WHERE user_id = $1`,
+      'SELECT user_id, email, full_name, role FROM users WHERE user_id = $1 AND is_active = true',
       [decoded.user_id]
     );
 
-    if (result.rows.length === 0 || !result.rows[0].is_active) {
+    if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'User not found or inactive'
@@ -559,30 +607,38 @@ exports.refreshToken = async (req, res) => {
 
     const user = result.rows[0];
 
-    // Generate new access token
-    const accessToken = generateToken(user);
+    // Generate new tokens
+    const newToken = generateToken(user);
+    const newRefreshToken = generateRefreshToken(user);
 
-    res.status(200).json({
+    res.json({
       success: true,
-      data: {
-        accessToken
-      }
+      token: newToken,
+      refreshToken: newRefreshToken
     });
 
   } catch (error) {
     console.error('Refresh token error:', error);
-    
-    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired refresh token'
-      });
-    }
-
-    res.status(500).json({
+    res.status(401).json({
       success: false,
-      message: 'Failed to refresh token',
+      message: 'Invalid refresh token',
       error: error.message
     });
   }
 };
+
+// ============================================================================
+// HELPER FUNCTION: Calculate Age
+// ============================================================================
+function calculateAge(dateOfBirth) {
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return age;
+}

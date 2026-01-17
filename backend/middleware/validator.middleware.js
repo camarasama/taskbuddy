@@ -128,6 +128,50 @@ exports.validateMemberAdd = [
 ];
 
 // ============================================================================
+// CHILD CREATION VALIDATOR (NEW)
+// Validates child account creation by parent/spouse
+// ============================================================================
+exports.validateChildCreation = [
+  body('full_name')
+    .trim()
+    .notEmpty().withMessage('Full name is required')
+    .isLength({ min: 2 }).withMessage('Full name must be at least 2 characters'),
+  body('date_of_birth')
+    .notEmpty().withMessage('Date of birth is required')
+    .isISO8601().withMessage('Valid date of birth is required'),
+  body('email')
+    .optional({ checkFalsy: true })
+    .isEmail().withMessage('Valid email is required')
+    .normalizeEmail(),
+  body('phone_number')
+    .optional({ checkFalsy: true })
+    .isMobilePhone().withMessage('Valid phone number is required'),
+  handleValidationErrors
+];
+
+// ============================================================================
+// SPOUSE CREATION VALIDATOR (NEW)
+// Validates spouse account creation by parent
+// ============================================================================
+exports.validateSpouseCreation = [
+  body('full_name')
+    .trim()
+    .notEmpty().withMessage('Full name is required')
+    .isLength({ min: 2 }).withMessage('Full name must be at least 2 characters'),
+  body('email')
+    .notEmpty().withMessage('Email is required')
+    .isEmail().withMessage('Valid email is required')
+    .normalizeEmail(),
+  body('date_of_birth')
+    .notEmpty().withMessage('Date of birth is required')
+    .isISO8601().withMessage('Valid date of birth is required'),
+  body('phone_number')
+    .optional({ checkFalsy: true })
+    .isMobilePhone().withMessage('Valid phone number is required'),
+  handleValidationErrors
+];
+
+// ============================================================================
 // TASK VALIDATORS
 // ============================================================================
 

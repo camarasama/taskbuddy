@@ -1,6 +1,7 @@
 // ============================================================================
-// Email Service
+// Email Service - UPDATED
 // Handles email sending using Nodemailer
+// Changes: Added sendAccountCreationEmail function for child/spouse accounts
 // ============================================================================
 
 const nodemailer = require('nodemailer');
@@ -108,6 +109,71 @@ exports.sendPasswordResetEmail = async (email, fullName, resetToken) => {
   } catch (error) {
     console.error('Error sending password reset email:', error);
     throw new Error('Failed to send password reset email');
+  }
+};
+
+// ============================================================================
+// SEND ACCOUNT CREATION EMAIL - NEW FUNCTION
+// Sends login credentials to child/spouse accounts created by parent
+// ============================================================================
+exports.sendAccountCreationEmail = async (email, fullName, temporaryPassword, accountType = 'child') => {
+  try {
+    const transporter = createTransporter();
+    
+    const accountTypeName = accountType === 'child' ? 'Child' : 'Spouse';
+    
+    const mailOptions = {
+      from: `"TaskBuddy" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: `Your TaskBuddy Account Has Been Created`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #4F46E5;">Welcome to TaskBuddy, ${fullName}!</h2>
+          <p>A family member has created a ${accountTypeName.toLowerCase()} account for you on TaskBuddy.</p>
+          
+          <div style="background-color: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #1F2937;">Your Login Credentials:</h3>
+            <p style="margin: 10px 0;"><strong>Email:</strong> ${email}</p>
+            <p style="margin: 10px 0;"><strong>Temporary Password:</strong></p>
+            <div style="background-color: white; padding: 15px; border-radius: 5px; border: 2px solid #4F46E5; margin: 10px 0;">
+              <code style="font-size: 18px; font-weight: bold; color: #4F46E5;">${temporaryPassword}</code>
+            </div>
+          </div>
+          
+          <div style="background-color: #FEF3C7; padding: 15px; border-radius: 8px; border-left: 4px solid #F59E0B; margin: 20px 0;">
+            <p style="margin: 0; color: #92400E;">
+              <strong>⚠️ Important:</strong> Please change your password after your first login for security.
+            </p>
+          </div>
+          
+          <div style="margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL}/login" 
+               style="background-color: #4F46E5; color: white; padding: 12px 24px; 
+                      text-decoration: none; border-radius: 5px; display: inline-block;">
+              Login to TaskBuddy
+            </a>
+          </div>
+          
+          <p style="color: #6B7280; font-size: 14px; margin-top: 30px;">
+            If you did not expect this email, please contact your family administrator or 
+            ignore this message.
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;" />
+          
+          <p style="color: #6B7280; font-size: 12px;">
+            This is an automated email from TaskBuddy. Please do not reply to this email.
+          </p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Account creation email sent to: ${email} (${accountType})`);
+
+  } catch (error) {
+    console.error('Error sending account creation email:', error);
+    // Don't throw error - account is still created even if email fails
   }
 };
 

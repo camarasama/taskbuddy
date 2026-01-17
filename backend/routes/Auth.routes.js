@@ -1,13 +1,18 @@
 // ============================================================================
-// Authentication Routes
+// Authentication Routes - UPDATED
 // Handles user registration, login, email verification, password reset
+// Changes: Added admin registration route with secret verification
 // ============================================================================
 
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const { authenticate } = require('../middleware/auth.middleware');
-const { validateRegistration, validateLogin, validateEmail, validatePasswordReset } = require('../middleware/validator.middleware');
+const { verifyAdminSecret } = require('../middleware/adminSecret.middleware');
+const { 
+  validateParentRegistration, 
+  validateAdminRegistration 
+} = require('../validators/auth.validator');
 
 // ============================================================================
 // PUBLIC ROUTES (No authentication required)
@@ -15,45 +20,56 @@ const { validateRegistration, validateLogin, validateEmail, validatePasswordRese
 
 /**
  * @route   POST /api/auth/register
- * @desc    Register a new user (Parent creates account)
+ * @desc    Register a new parent user (Public self-registration)
  * @access  Public
  */
-router.post('/register', validateRegistration, authController.register);
+router.post('/register', validateParentRegistration, authController.register);
+
+/**
+ * @route   POST /api/auth/admin-register
+ * @desc    Register a new admin user (Restricted with secret key)
+ * @access  Public (but requires admin secret)
+ */
+router.post('/admin-register', 
+  validateAdminRegistration, 
+  verifyAdminSecret, 
+  authController.registerAdmin
+);
 
 /**
  * @route   POST /api/auth/login
  * @desc    Login user and return JWT token
  * @access  Public
  */
-router.post('/login', validateLogin, authController.login);
+router.post('/login', authController.login);
 
 /**
  * @route   POST /api/auth/verify-email
  * @desc    Verify user email with verification token
  * @access  Public
  */
-router.post('/verify-email', validateEmail, authController.verifyEmail);
+router.post('/verify-email', authController.verifyEmail);
 
 /**
  * @route   POST /api/auth/resend-verification
  * @desc    Resend email verification link
  * @access  Public
  */
-router.post('/resend-verification', validateEmail, authController.resendVerification);
+router.post('/resend-verification', authController.resendVerification);
 
 /**
  * @route   POST /api/auth/forgot-password
  * @desc    Send password reset email
  * @access  Public
  */
-router.post('/forgot-password', validateEmail, authController.forgotPassword);
+router.post('/forgot-password', authController.forgotPassword);
 
 /**
  * @route   POST /api/auth/reset-password
  * @desc    Reset password with reset token
  * @access  Public
  */
-router.post('/reset-password', validatePasswordReset, authController.resetPassword);
+router.post('/reset-password', authController.resetPassword);
 
 // ============================================================================
 // PROTECTED ROUTES (Authentication required)

@@ -1,14 +1,22 @@
 // ============================================================================
-// Family Routes
+// Family Routes - UPDATED
 // Handles family creation, management, member operations
+// Changes: Added routes for parent to create child and spouse accounts
 // ============================================================================
 
 const express = require('express');
 const router = express.Router();
 const familyController = require('../controllers/family.controller');
+const familyMemberController = require('../controllers/familyMember.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/role.middleware');
-const { validateFamilyCreation, validateFamilyUpdate, validateMemberAdd } = require('../middleware/validator.middleware');
+const { 
+  validateFamilyCreation, 
+  validateFamilyUpdate, 
+  validateMemberAdd,
+  validateChildCreation,
+  validateSpouseCreation 
+} = require('../middleware/validator.middleware');
 
 // ============================================================================
 // PROTECTED ROUTES (Authentication required)
@@ -73,6 +81,30 @@ router.get('/:familyId/members', authenticate, familyController.getFamilyMembers
  * @access  Private/Parent/Spouse
  */
 router.post('/:familyId/members', authenticate, requireRole(['parent', 'spouse']), validateMemberAdd, familyController.addFamilyMember);
+
+/**
+ * @route   POST /api/families/:familyId/add-child
+ * @desc    Create child account and add to family (Parent/Spouse only)
+ * @access  Private/Parent/Spouse
+ */
+router.post('/:familyId/add-child', 
+  authenticate, 
+  requireRole(['parent', 'spouse']), 
+  validateChildCreation,
+  familyMemberController.addChild
+);
+
+/**
+ * @route   POST /api/families/:familyId/add-spouse
+ * @desc    Create spouse account and add to family (Parent only)
+ * @access  Private/Parent
+ */
+router.post('/:familyId/add-spouse', 
+  authenticate, 
+  requireRole(['parent']), 
+  validateSpouseCreation,
+  familyMemberController.addSpouse
+);
 
 /**
  * @route   GET /api/families/:familyId/members/:userId
