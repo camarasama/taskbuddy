@@ -6,7 +6,7 @@
 
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const pool = require('../config/database');
+const { pool } = require('../config/database');
 const emailService = require('../services/email.service');
 const { generateToken, generateRefreshToken } = require('../utils/helpers');
 

@@ -11,10 +11,16 @@ const { errorHandler, notFound } = require('./middleware/errorHandler.middleware
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.io
+// Initialize Socket.io with enhanced CORS
 const io = socketIo(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: [
+      process.env.FRONTEND_URL,
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://localhost:3000',
+      'http://127.0.0.1:3000'
+    ].filter(Boolean),
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -23,23 +29,71 @@ const io = socketIo(server, {
 // Make io accessible to routes
 app.set('io', io);
 
-// Middleware
+// ============================================================================
+// MIDDLEWARE - Enhanced CORS Configuration
+// ============================================================================
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+].filter(Boolean);
+
+// CORS middleware - MUST BE BEFORE ROUTES
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn('⚠️ CORS Warning - Origin not in whitelist:', origin);
+      // In development, still allow it
+      if (process.env.NODE_ENV === 'development') {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 600 // Cache preflight requests for 10 minutes
 }));
+
+// Handle preflight requests explicitly
+app.options('*', cors());
+
+// Body parser middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files statically
 app.use('/uploads', express.static('uploads'));
 
+// Request logging middleware (helpful for debugging)
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.path} - Origin: ${req.get('origin') || 'No origin'}`);
+  next();
+});
+
 // Health check route
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'TaskBuddy API is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    cors: {
+      allowedOrigins: allowedOrigins,
+      currentOrigin: req.get('origin') || 'No origin header'
+    }
   });
 });
 
@@ -63,20 +117,23 @@ app.use('/api/reports', require('./routes/Report.routes'));
 app.use('/api/analytics', require('./routes/Analytics.routes'));
 app.use('/api/export', require('./routes/Export.routes'));
 
-// Socket.io connection handling
+// ============================================================================
+// SOCKET.IO CONNECTION HANDLING
+// ============================================================================
+
 io.on('connection', (socket) => {
   console.log('🔌 New client connected:', socket.id);
 
   // Join family room
   socket.on('join-family', (familyId) => {
     socket.join(`family-${familyId}`);
-    console.log(`User joined family room: family-${familyId}`);
+    console.log(`✅ User joined family room: family-${familyId}`);
   });
 
   // Leave family room
   socket.on('leave-family', (familyId) => {
     socket.leave(`family-${familyId}`);
-    console.log(`User left family room: family-${familyId}`);
+    console.log(`👋 User left family room: family-${familyId}`);
   });
 
   // Disconnect
@@ -85,11 +142,20 @@ io.on('connection', (socket) => {
   });
 });
 
-// Error handling middleware
+// ============================================================================
+// ERROR HANDLING MIDDLEWARE
+// ============================================================================
+
+// 404 handler - Must be AFTER all routes
 app.use(notFound);
+
+// Global error handler - Must be last
 app.use(errorHandler);
 
-// Start server
+// ============================================================================
+// START SERVER
+// ============================================================================
+
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
@@ -98,24 +164,66 @@ server.listen(PORT, () => {
 ║                                           ║
 ║        🚀 TaskBuddy Server Running        ║
 ║                                           ║
-║  Environment: ${process.env.NODE_ENV || 'development'}                  ║
-║  Port: ${PORT}                               ║
+║  Environment: ${(process.env.NODE_ENV || 'development').padEnd(27)} ║
+║  Port: ${PORT.toString().padEnd(34)} ║
 ║  URL: http://localhost:${PORT}              ║
 ║                                           ║
+║  📡 Socket.IO: Enabled                    ║
+║  🌐 CORS: ${allowedOrigins.length} origins whitelisted        ║
+║                                           ║
+║  Health Check:                            ║
+║  http://localhost:${PORT}/api/health        ║
+║                                           ║
 ╚═══════════════════════════════════════════╝
+
+✅ Server started successfully at ${new Date().toLocaleString()}
+
+📝 Allowed CORS Origins:
+${allowedOrigins.map((origin, i) => `   ${i + 1}. ${origin}`).join('\n')}
+
+🔧 Ready for connections...
   `);
 });
 
+// ============================================================================
+// GRACEFUL SHUTDOWN HANDLERS
+// ============================================================================
+
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('❌ Unhandled Rejection:', err);
-  server.close(() => process.exit(1));
+process.on('unhandledRejection', (err, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise);
+  console.error('❌ Reason:', err);
+  // Close server gracefully
+  server.close(() => {
+    console.log('🛑 Server closed due to unhandled rejection');
+    process.exit(1);
+  });
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
   console.error('❌ Uncaught Exception:', err);
+  console.error('❌ Stack:', err.stack);
+  // Exit immediately
   process.exit(1);
+});
+
+// Handle SIGTERM (for graceful shutdown)
+process.on('SIGTERM', () => {
+  console.log('📥 SIGTERM received. Closing server gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+// Handle SIGINT (Ctrl+C)
+process.on('SIGINT', () => {
+  console.log('\n📥 SIGINT received. Closing server gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
 });
 
 module.exports = { app, io };

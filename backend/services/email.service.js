@@ -7,13 +7,13 @@
 const nodemailer = require('nodemailer');
 
 // ============================================================================
-// CREATE TRANSPORTER
+// CREATE Transport
 // ============================================================================
-const createTransporter = () => {
+const createTransport= () => {
   // For development: Use Gmail or other SMTP service
   // For production: Use a service like SendGrid, AWS SES, etc.
   
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: process.env.SMTP_PORT || 587,
     secure: false, // true for 465, false for other ports
@@ -29,7 +29,7 @@ const createTransporter = () => {
 // ============================================================================
 exports.sendVerificationEmail = async (email, fullName, verificationToken) => {
   try {
-    const transporter = createTransporter();
+    const Transport= createTransport();
     
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
     
@@ -59,7 +59,7 @@ exports.sendVerificationEmail = async (email, fullName, verificationToken) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await Transport.sendMail(mailOptions);
     console.log('Verification email sent to:', email);
 
   } catch (error) {
@@ -73,7 +73,7 @@ exports.sendVerificationEmail = async (email, fullName, verificationToken) => {
 // ============================================================================
 exports.sendPasswordResetEmail = async (email, fullName, resetToken) => {
   try {
-    const transporter = createTransporter();
+    const Transport= createTransport();
     
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
     
@@ -103,7 +103,7 @@ exports.sendPasswordResetEmail = async (email, fullName, resetToken) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await Transport.sendMail(mailOptions);
     console.log('Password reset email sent to:', email);
 
   } catch (error) {
@@ -118,7 +118,7 @@ exports.sendPasswordResetEmail = async (email, fullName, resetToken) => {
 // ============================================================================
 exports.sendAccountCreationEmail = async (email, fullName, temporaryPassword, accountType = 'child') => {
   try {
-    const transporter = createTransporter();
+    const Transport= createTransport();
     
     const accountTypeName = accountType === 'child' ? 'Child' : 'Spouse';
     
@@ -168,7 +168,7 @@ exports.sendAccountCreationEmail = async (email, fullName, temporaryPassword, ac
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await Transport.sendMail(mailOptions);
     console.log(`Account creation email sent to: ${email} (${accountType})`);
 
   } catch (error) {
@@ -182,7 +182,7 @@ exports.sendAccountCreationEmail = async (email, fullName, temporaryPassword, ac
 // ============================================================================
 exports.sendTaskNotificationEmail = async (email, fullName, taskTitle, notificationType) => {
   try {
-    const transporter = createTransporter();
+    const Transport= createTransport();
     
     let subject, message;
     
@@ -227,7 +227,7 @@ exports.sendTaskNotificationEmail = async (email, fullName, taskTitle, notificat
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await Transport.sendMail(mailOptions);
     console.log('Task notification email sent to:', email);
 
   } catch (error) {
@@ -241,7 +241,7 @@ exports.sendTaskNotificationEmail = async (email, fullName, taskTitle, notificat
 // ============================================================================
 exports.sendRewardNotificationEmail = async (email, fullName, rewardName, notificationType) => {
   try {
-    const transporter = createTransporter();
+    const Transport= createTransport();
     
     let subject, message;
     
@@ -278,7 +278,7 @@ exports.sendRewardNotificationEmail = async (email, fullName, rewardName, notifi
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await Transport.sendMail(mailOptions);
     console.log('Reward notification email sent to:', email);
 
   } catch (error) {
@@ -292,7 +292,7 @@ exports.sendRewardNotificationEmail = async (email, fullName, rewardName, notifi
 // ============================================================================
 exports.sendWelcomeEmail = async (email, fullName) => {
   try {
-    const transporter = createTransporter();
+    const Transport= createTransport();
     
     const mailOptions = {
       from: `"TaskBuddy" <${process.env.SMTP_USER}>`,
@@ -325,7 +325,7 @@ exports.sendWelcomeEmail = async (email, fullName) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await Transport.sendMail(mailOptions);
     console.log('Welcome email sent to:', email);
 
   } catch (error) {
