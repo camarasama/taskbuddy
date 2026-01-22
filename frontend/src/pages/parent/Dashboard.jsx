@@ -9,7 +9,8 @@ import {
   TrendingUp,
   Calendar,
   Award,
-  Clock
+  Clock,
+  Plus
 } from 'lucide-react';
 
 const StatCard = ({ icon: Icon, title, value, subtitle, color, link }) => (
@@ -177,9 +178,27 @@ export default function ParentDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Parent Dashboard</h1>
-        <p className="text-gray-600 mt-2">Manage your family's tasks and rewards</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Parent Dashboard</h1>
+          <p className="text-gray-600 mt-2">Manage your family's tasks and rewards</p>
+        </div>
+        <div className="flex space-x-3">
+          <Link
+            to="/parent/tasks/create"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Create Task
+          </Link>
+          <Link
+            to="/parent/rewards/create"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Create Reward
+          </Link>
+        </div>
       </div>
 
       {error && (
