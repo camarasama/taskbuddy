@@ -29,7 +29,8 @@ const CATEGORIES = [
 const PRIORITY_OPTIONS = [
   { value: 'low', label: 'Low', color: 'text-green-600' },
   { value: 'medium', label: 'Medium', color: 'text-yellow-600' },
-  { value: 'high', label: 'High', color: 'text-red-600' }
+  { value: 'high', label: 'High', color: 'text-red-600' },
+  { value: 'urgent', label: 'Urgent', color: 'text-red-800' }
 ];
 
 const STATUS_OPTIONS = [
@@ -54,14 +55,17 @@ export default function EditTask() {
   const [deleting, setDeleting] = useState(false);
   const [errors, setErrors] = useState({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  // ✅ FIXED: Using correct field names that match backend
   const [formData, setFormData] = useState({
-    task_name: '',
+    title: '',                // Changed from task_name
     description: '',
     category: '',
     priority: 'medium',
     points_reward: '',
-    due_date: '',
-    requires_photo: false,
+    deadline: '',            // Changed from due_date
+    photo_required: false,   // Changed from requires_photo
+    is_recurring: false,
     recurrence_pattern: 'none',
     status: 'active'
   });
@@ -73,24 +77,33 @@ export default function EditTask() {
   const fetchTask = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/tasks/${taskId}`);
-      const task = response.data.data;
+      console.log('📤 Fetching task:', taskId);
       
+      const response = await api.get(`/tasks/${taskId}`);
+      
+      // Handle different response structures
+      const task = response.data.data?.task || response.data.data || response.data;
+      
+      console.log('✅ Task loaded:', task);
+      
+      // ✅ FIXED: Map backend fields to frontend form fields
       setFormData({
-        task_name: task.task_name,
-        description: task.description,
+        title: task.title || task.task_name || '',
+        description: task.description || '',
         category: task.category || '',
-        priority: task.priority,
-        points_reward: task.points_reward,
-        due_date: task.due_date ? task.due_date.split('T')[0] : '',
-        requires_photo: task.requires_photo,
+        priority: task.priority || 'medium',
+        points_reward: task.points_reward || '',
+        deadline: task.deadline || task.due_date ? (task.deadline || task.due_date).split('T')[0] : '',
+        photo_required: task.photo_required ?? task.requires_photo ?? false,
+        is_recurring: task.is_recurring || false,
         recurrence_pattern: task.recurrence_pattern || 'none',
-        status: task.status
+        status: task.status || 'active'
       });
       
+      setErrors({});
     } catch (err) {
-      console.error('Error fetching task:', err);
-      setErrors({ fetch: 'Failed to load task details' });
+      console.error('❌ Error fetching task:', err);
+      setErrors({ fetch: err.response?.data?.message || 'Failed to load task details' });
     } finally {
       setLoading(false);
     }
@@ -103,6 +116,7 @@ export default function EditTask() {
       [name]: type === 'checkbox' ? checked : value
     }));
     
+    // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -114,14 +128,19 @@ export default function EditTask() {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.task_name.trim()) {
-      newErrors.task_name = 'Task name is required';
-    } else if (formData.task_name.length > 100) {
-      newErrors.task_name = 'Task name must be 100 characters or less';
+    // ✅ FIXED: Validate 'title' field
+    if (!formData.title.trim()) {
+      newErrors.title = 'Task title is required';
+    } else if (formData.title.length < 3) {
+      newErrors.title = 'Title must be at least 3 characters';
+    } else if (formData.title.length > 255) {
+      newErrors.title = 'Title must be 255 characters or less';
     }
 
     if (!formData.description.trim()) {
       newErrors.description = 'Description is required';
+    } else if (formData.description.length > 1000) {
+      newErrors.description = 'Description must be 1000 characters or less';
     }
 
     if (!formData.category) {
@@ -134,18 +153,19 @@ export default function EditTask() {
       const points = parseInt(formData.points_reward);
       if (isNaN(points) || points < 1) {
         newErrors.points_reward = 'Points must be at least 1';
-      } else if (points > 1000) {
-        newErrors.points_reward = 'Points cannot exceed 1000';
+      } else if (points > 10000) {
+        newErrors.points_reward = 'Points cannot exceed 10,000';
       }
     }
 
-    if (formData.due_date) {
-      const dueDate = new Date(formData.due_date);
+    // ✅ FIXED: Validate 'deadline' field
+    if (formData.deadline) {
+      const deadline = new Date(formData.deadline);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      if (dueDate < today) {
-        newErrors.due_date = 'Due date cannot be in the past';
+      if (deadline < today) {
+        newErrors.deadline = 'Deadline cannot be in the past';
       }
     }
 
@@ -164,34 +184,42 @@ export default function EditTask() {
       setSaving(true);
       setErrors({});
 
+      // ✅ FIXED: Send correct field names to backend
       const payload = {
-        task_name: formData.task_name.trim(),
+        title: formData.title.trim(),
         description: formData.description.trim(),
         category: formData.category,
         priority: formData.priority,
         points_reward: parseInt(formData.points_reward),
         status: formData.status,
-        requires_photo: formData.requires_photo,
-        ...(formData.due_date && { due_date: formData.due_date }),
+        photo_required: formData.photo_required,
+        ...(formData.deadline && { deadline: formData.deadline }),
         ...(formData.recurrence_pattern !== 'none' && { 
+          is_recurring: true,
           recurrence_pattern: formData.recurrence_pattern 
         })
       };
 
+      console.log('📤 Updating task:', payload);
+
       await api.put(`/tasks/${taskId}`, payload);
       
+      console.log('✅ Task updated successfully');
+
       navigate('/parent/tasks', { 
         state: { message: 'Task updated successfully!' } 
       });
 
     } catch (err) {
-      console.error('Error updating task:', err);
+      console.error('❌ Error updating task:', err);
       
       if (err.response?.data?.errors) {
         const backendErrors = {};
-        err.response.data.errors.forEach(error => {
-          backendErrors[error.path] = error.msg;
-        });
+        if (Array.isArray(err.response.data.errors)) {
+          err.response.data.errors.forEach(error => {
+            backendErrors[error.path || error.field || error.param] = error.msg || error.message;
+          });
+        }
         setErrors(backendErrors);
       } else {
         setErrors({
@@ -223,14 +251,9 @@ export default function EditTask() {
     }
   };
 
-  const handleArchive = async () => {
-    setFormData(prev => ({ ...prev, status: 'archived' }));
-    // Submit will be triggered by the form
-  };
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
           <p className="mt-4 text-gray-600">Loading task...</p>
@@ -241,17 +264,16 @@ export default function EditTask() {
 
   if (errors.fetch) {
     return (
-      <div className="max-w-3xl mx-auto mt-8">
+      <div className="max-w-3xl mx-auto p-6">
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {errors.fetch}
+          <p className="font-medium">{errors.fetch}</p>
+          <button
+            onClick={fetchTask}
+            className="text-sm underline mt-2"
+          >
+            Try again
+          </button>
         </div>
-        <Link
-          to="/parent/tasks"
-          className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700 mt-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Back to Tasks
-        </Link>
       </div>
     );
   }
@@ -274,29 +296,32 @@ export default function EditTask() {
       {/* Form */}
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow">
         <div className="p-6 space-y-6">
-          {/* Task Name */}
+          {/* Task Title - FIXED */}
           <div>
-            <label htmlFor="task_name" className="block text-sm font-medium text-gray-700">
-              Task Name *
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+              Task Title *
             </label>
             <div className="mt-1 relative">
               <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                id="task_name"
-                name="task_name"
-                value={formData.task_name}
+                id="title"
+                name="title"
+                value={formData.title}
                 onChange={handleChange}
                 className={`pl-10 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                  errors.task_name ? 'border-red-500' : 'border-gray-300'
+                  errors.title ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="e.g., Clean your room"
-                maxLength={100}
+                maxLength={255}
               />
             </div>
-            {errors.task_name && (
-              <p className="mt-1 text-sm text-red-600">{errors.task_name}</p>
+            {errors.title && (
+              <p className="mt-1 text-sm text-red-600">{errors.title}</p>
             )}
+            <p className="mt-1 text-xs text-gray-500">
+              {formData.title.length}/255 characters
+            </p>
           </div>
 
           {/* Description */}
@@ -314,10 +339,14 @@ export default function EditTask() {
                 errors.description ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="Describe what needs to be done..."
+              maxLength={1000}
             />
             {errors.description && (
               <p className="mt-1 text-sm text-red-600">{errors.description}</p>
             )}
+            <p className="mt-1 text-xs text-gray-500">
+              {formData.description.length}/1000 characters
+            </p>
           </div>
 
           {/* Category and Priority */}
@@ -368,7 +397,7 @@ export default function EditTask() {
             </div>
           </div>
 
-          {/* Points and Due Date */}
+          {/* Points and Deadline - FIXED */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="points_reward" className="block text-sm font-medium text-gray-700">
@@ -383,7 +412,7 @@ export default function EditTask() {
                   value={formData.points_reward}
                   onChange={handleChange}
                   min="1"
-                  max="1000"
+                  max="10000"
                   className={`pl-10 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
                     errors.points_reward ? 'border-red-500' : 'border-gray-300'
                   }`}
@@ -395,24 +424,24 @@ export default function EditTask() {
             </div>
 
             <div>
-              <label htmlFor="due_date" className="block text-sm font-medium text-gray-700">
-                Due Date
+              <label htmlFor="deadline" className="block text-sm font-medium text-gray-700">
+                Deadline
               </label>
               <div className="mt-1 relative">
                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="date"
-                  id="due_date"
-                  name="due_date"
-                  value={formData.due_date}
+                  id="deadline"
+                  name="deadline"
+                  value={formData.deadline}
                   onChange={handleChange}
                   className={`pl-10 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                    errors.due_date ? 'border-red-500' : 'border-gray-300'
+                    errors.deadline ? 'border-red-500' : 'border-gray-300'
                   }`}
                 />
               </div>
-              {errors.due_date && (
-                <p className="mt-1 text-sm text-red-600">{errors.due_date}</p>
+              {errors.deadline && (
+                <p className="mt-1 text-sm text-red-600">{errors.deadline}</p>
               )}
             </div>
           </div>
@@ -461,23 +490,26 @@ export default function EditTask() {
             </div>
           </div>
 
-          {/* Photo Requirement */}
+          {/* Photo Requirement - FIXED */}
           <div className="flex items-start">
             <div className="flex items-center h-5">
               <input
                 type="checkbox"
-                id="requires_photo"
-                name="requires_photo"
-                checked={formData.requires_photo}
+                id="photo_required"
+                name="photo_required"
+                checked={formData.photo_required}
                 onChange={handleChange}
                 className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
               />
             </div>
             <div className="ml-3">
-              <label htmlFor="requires_photo" className="font-medium text-gray-700 flex items-center">
+              <label htmlFor="photo_required" className="font-medium text-gray-700 flex items-center">
                 <Camera className="w-4 h-4 mr-2" />
                 Require photo proof of completion
               </label>
+              <p className="text-sm text-gray-500">
+                Children must upload a photo when submitting this task
+              </p>
             </div>
           </div>
 
@@ -500,7 +532,7 @@ export default function EditTask() {
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors"
             >
               {saving ? (
                 <>
@@ -518,7 +550,7 @@ export default function EditTask() {
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50"
+              className="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 transition-colors"
             >
               <Trash2 className="w-4 h-4 mr-2" />
               Delete Task
@@ -526,7 +558,7 @@ export default function EditTask() {
 
             <Link
               to="/parent/tasks"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
             >
               Cancel
             </Link>
@@ -537,24 +569,48 @@ export default function EditTask() {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Task?</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this task? This action cannot be undone. All assignments and history will be permanently removed.
+          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+            <div className="flex items-center mb-4">
+              <AlertCircle className="w-6 h-6 text-red-600 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">Delete Task?</h3>
+            </div>
+            
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to delete "<strong>{formData.title}</strong>"?
             </p>
+            
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-yellow-800">
+                <strong>Warning:</strong> This will permanently delete:
+              </p>
+              <ul className="text-sm text-yellow-700 mt-2 space-y-1 ml-4">
+                <li>• All assignments for this task</li>
+                <li>• All submissions and photos</li>
+                <li>• Task history and statistics</li>
+              </ul>
+            </div>
+
             <div className="flex space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
-                {deleting ? 'Deleting...' : 'Delete'}
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                Cancel
+                {deleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Task'
+                )}
               </button>
             </div>
           </div>

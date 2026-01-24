@@ -470,23 +470,28 @@ exports.resetPassword = async (req, res) => {
 // ============================================================================
 exports.getCurrentUser = async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT user_id, email, full_name, role, profile_picture, date_of_birth, 
-              phone_number, is_active, email_verified, created_at, last_login
-       FROM users WHERE user_id = $1`,
+    const userResult = await pool.query(
+      `SELECT u.user_id, u.email, u.full_name, u.role, u.profile_picture, u.date_of_birth, 
+          u.phone_number, u.is_active, u.email_verified, u.created_at, u.last_login,
+          fm.family_id, fm.relationship, fm.points_balance
+      FROM users u
+      LEFT JOIN family_members fm ON u.user_id = fm.user_id AND fm.is_active = TRUE
+      WHERE u.user_id = $1`,
       [req.user.user_id]
     );
+      const userData = userResult.rows[0];
 
-    if (result.rows.length === 0) {
+    if (userResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
     }
 
+    
     res.json({
       success: true,
-      user: result.rows[0]
+      data: userData  // ✅ Changed from 'user' to 'data'
     });
 
   } catch (error) {

@@ -9,7 +9,8 @@ import {
   Hash,
   AlertCircle,
   FileText,
-  Trash2
+  Trash2,
+  TrendingUp
 } from 'lucide-react';
 
 export default function EditReward() {
@@ -39,25 +40,38 @@ export default function EditReward() {
   const fetchReward = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/rewards/${rewardId}`);
-      const reward = response.data.data;
+      console.log('📤 Fetching reward:', rewardId);
       
+      const response = await api.get(`/rewards/${rewardId}`);
+      
+      console.log('📥 Raw response:', response.data);
+      
+      // ✅ Handle different response structures
+      const reward = response.data.data?.reward || response.data.data || response.data;
+      
+      console.log('✅ Reward loaded:', reward);
+      
+      // ✅ Populate form with fallback values
       setFormData({
-        reward_name: reward.reward_name,
-        description: reward.description,
-        points_required: reward.points_required,
-        quantity_available: reward.quantity_available,
-        status: reward.status
+        reward_name: reward.reward_name || '',
+        description: reward.description || '',
+        points_required: reward.points_required || '',
+        quantity_available: reward.quantity_available || '',
+        status: reward.status || 'available'
       });
 
+      // ✅ Set redemption stats
       setRedemptionStats({
-        total_redemptions: reward.quantity_redeemed || 0,
+        total_redemptions: reward.quantity_redeemed || reward.total_redemptions || 0,
         pending_redemptions: reward.pending_redemptions || 0
       });
       
+      setErrors({});
     } catch (err) {
-      console.error('Error fetching reward:', err);
-      setErrors({ fetch: 'Failed to load reward details' });
+      console.error('❌ Error fetching reward:', err);
+      setErrors({ 
+        fetch: err.response?.data?.message || 'Failed to load reward details. Please try again.' 
+      });
     } finally {
       setLoading(false);
     }
@@ -70,6 +84,7 @@ export default function EditReward() {
       [name]: value
     }));
     
+    // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -83,12 +98,16 @@ export default function EditReward() {
 
     if (!formData.reward_name.trim()) {
       newErrors.reward_name = 'Reward name is required';
-    } else if (formData.reward_name.length > 100) {
-      newErrors.reward_name = 'Reward name must be 100 characters or less';
+    } else if (formData.reward_name.length < 2) {
+      newErrors.reward_name = 'Reward name must be at least 2 characters';
+    } else if (formData.reward_name.length > 255) {
+      newErrors.reward_name = 'Reward name must be 255 characters or less';
     }
 
     if (!formData.description.trim()) {
       newErrors.description = 'Description is required';
+    } else if (formData.description.length > 500) {
+      newErrors.description = 'Description must be 500 characters or less';
     }
 
     if (!formData.points_required) {
@@ -106,8 +125,10 @@ export default function EditReward() {
       newErrors.quantity_available = 'Quantity is required';
     } else {
       const quantity = parseInt(formData.quantity_available);
-      if (isNaN(quantity) || quantity < redemptionStats.total_redemptions) {
-        newErrors.quantity_available = `Quantity must be at least ${redemptionStats.total_redemptions} (already redeemed)`;
+      const minQuantity = redemptionStats.total_redemptions;
+      
+      if (isNaN(quantity) || quantity < minQuantity) {
+        newErrors.quantity_available = `Quantity must be at least ${minQuantity} (already redeemed)`;
       } else if (quantity > 1000) {
         newErrors.quantity_available = 'Quantity cannot exceed 1,000';
       }
@@ -136,20 +157,26 @@ export default function EditReward() {
         status: formData.status
       };
 
+      console.log('📤 Updating reward:', payload);
+
       await api.put(`/rewards/${rewardId}`, payload);
       
+      console.log('✅ Reward updated successfully');
+
       navigate('/parent/rewards', { 
         state: { message: 'Reward updated successfully!' } 
       });
 
     } catch (err) {
-      console.error('Error updating reward:', err);
+      console.error('❌ Error updating reward:', err);
       
       if (err.response?.data?.errors) {
         const backendErrors = {};
-        err.response.data.errors.forEach(error => {
-          backendErrors[error.path] = error.msg;
-        });
+        if (Array.isArray(err.response.data.errors)) {
+          err.response.data.errors.forEach(error => {
+            backendErrors[error.path || error.field || error.param] = error.msg || error.message;
+          });
+        }
         setErrors(backendErrors);
       } else {
         setErrors({
@@ -181,9 +208,10 @@ export default function EditReward() {
     }
   };
 
+  // Loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
           <p className="mt-4 text-gray-600">Loading reward...</p>
@@ -192,15 +220,25 @@ export default function EditReward() {
     );
   }
 
+  // Error state
   if (errors.fetch) {
     return (
-      <div className="max-w-3xl mx-auto mt-8">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {errors.fetch}
+      <div className="max-w-3xl mx-auto p-6">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
+          <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-medium">{errors.fetch}</p>
+            <button
+              onClick={fetchReward}
+              className="text-sm underline mt-1 hover:text-red-900"
+            >
+              Try again
+            </button>
+          </div>
         </div>
         <Link
           to="/parent/rewards"
-          className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700 mt-4"
+          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mt-4"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
           Back to Rewards
@@ -209,7 +247,7 @@ export default function EditReward() {
     );
   }
 
-  const availableQuantity = formData.quantity_available - redemptionStats.total_redemptions;
+  const availableQuantity = parseInt(formData.quantity_available || 0) - redemptionStats.total_redemptions;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -226,22 +264,22 @@ export default function EditReward() {
         <p className="text-gray-600 mt-2">Update reward details and availability</p>
       </div>
 
-      {/* Redemption Stats */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Redemption Statistics</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <p className="text-3xl font-bold text-blue-600">{redemptionStats.total_redemptions}</p>
-            <p className="text-sm text-blue-700 mt-1">Total Redeemed</p>
-          </div>
-          <div className="text-center p-4 bg-yellow-50 rounded-lg">
-            <p className="text-3xl font-bold text-yellow-600">{redemptionStats.pending_redemptions}</p>
-            <p className="text-sm text-yellow-700 mt-1">Pending Requests</p>
-          </div>
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <p className="text-3xl font-bold text-green-600">{availableQuantity}</p>
-            <p className="text-sm text-green-700 mt-1">Still Available</p>
-          </div>
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <TrendingUp className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+          <p className="text-3xl font-bold text-blue-600">{redemptionStats.total_redemptions}</p>
+          <p className="text-sm text-blue-700 mt-1">Total Redeemed</p>
+        </div>
+        <div className="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+          <Award className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
+          <p className="text-3xl font-bold text-yellow-600">{redemptionStats.pending_redemptions}</p>
+          <p className="text-sm text-yellow-700 mt-1">Pending Requests</p>
+        </div>
+        <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+          <Gift className="w-8 h-8 text-green-600 mx-auto mb-2" />
+          <p className="text-3xl font-bold text-green-600">{availableQuantity}</p>
+          <p className="text-sm text-green-700 mt-1">Still Available</p>
         </div>
       </div>
 
@@ -264,12 +302,16 @@ export default function EditReward() {
                 className={`pl-10 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
                   errors.reward_name ? 'border-red-500' : 'border-gray-300'
                 }`}
-                maxLength={100}
+                placeholder="e.g., Extra screen time"
+                maxLength={255}
               />
             </div>
             {errors.reward_name && (
               <p className="mt-1 text-sm text-red-600">{errors.reward_name}</p>
             )}
+            <p className="mt-1 text-xs text-gray-500">
+              {formData.reward_name.length}/255 characters
+            </p>
           </div>
 
           {/* Description */}
@@ -288,11 +330,16 @@ export default function EditReward() {
                 className={`pl-10 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
                   errors.description ? 'border-red-500' : 'border-gray-300'
                 }`}
+                placeholder="Describe the reward in detail..."
+                maxLength={500}
               />
             </div>
             {errors.description && (
               <p className="mt-1 text-sm text-red-600">{errors.description}</p>
             )}
+            <p className="mt-1 text-xs text-gray-500">
+              {formData.description.length}/500 characters
+            </p>
           </div>
 
           {/* Points and Quantity */}
@@ -314,11 +361,15 @@ export default function EditReward() {
                   className={`pl-10 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
                     errors.points_required ? 'border-red-500' : 'border-gray-300'
                   }`}
+                  placeholder="e.g., 100"
                 />
               </div>
               {errors.points_required && (
                 <p className="mt-1 text-sm text-red-600">{errors.points_required}</p>
               )}
+              <p className="mt-1 text-xs text-gray-500">
+                Points children need to redeem (1-10,000)
+              </p>
             </div>
 
             <div>
@@ -338,6 +389,7 @@ export default function EditReward() {
                   className={`pl-10 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
                     errors.quantity_available ? 'border-red-500' : 'border-gray-300'
                   }`}
+                  placeholder="e.g., 10"
                 />
               </div>
               {errors.quantity_available && (
@@ -364,6 +416,9 @@ export default function EditReward() {
               <option value="available">Available</option>
               <option value="unavailable">Unavailable</option>
             </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Unavailable rewards won't show up for children to redeem
+            </p>
           </div>
 
           {/* Errors */}
@@ -385,7 +440,7 @@ export default function EditReward() {
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors"
             >
               {saving ? (
                 <>
@@ -403,7 +458,7 @@ export default function EditReward() {
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50"
+              className="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 transition-colors"
             >
               <Trash2 className="w-4 h-4 mr-2" />
               Delete Reward
@@ -411,7 +466,7 @@ export default function EditReward() {
 
             <Link
               to="/parent/rewards"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
             >
               Cancel
             </Link>
@@ -422,37 +477,63 @@ export default function EditReward() {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Reward?</h3>
+          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+            <div className="flex items-center mb-4">
+              <AlertCircle className="w-6 h-6 text-red-600 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">Delete Reward?</h3>
+            </div>
+            
             <p className="text-gray-600 mb-2">
-              Are you sure you want to delete this reward?
+              Are you sure you want to delete "<strong>{formData.reward_name}</strong>"?
             </p>
+            
             {redemptionStats.pending_redemptions > 0 && (
-              <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-2 rounded text-sm mb-4">
-                Warning: There are {redemptionStats.pending_redemptions} pending redemption requests for this reward.
+              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-3 py-2 rounded-lg text-sm mb-4">
+                <strong>Warning:</strong> There are {redemptionStats.pending_redemptions} pending redemption requests for this reward.
               </div>
             )}
+            
             <p className="text-sm text-gray-600 mb-6">
               This action cannot be undone. All redemption history will be kept for record purposes.
             </p>
-            <div className="flex space-x-3">
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
-                {deleting ? 'Deleting...' : 'Delete'}
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                Cancel
+                {deleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Reward'
+                )}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Tips */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="font-medium text-blue-900 mb-2">💡 Editing Tips</h3>
+        <ul className="text-sm text-blue-700 space-y-1">
+          <li>• Cannot reduce quantity below already redeemed amount</li>
+          <li>• Increasing quantity makes more available for redemption</li>
+          <li>• Setting status to "Unavailable" hides it from children</li>
+          <li>• Pending requests are not affected by quantity changes</li>
+        </ul>
+      </div>
     </div>
   );
 }

@@ -25,23 +25,43 @@ export const AuthProvider = ({ children }) => {
         const savedUser = localStorage.getItem('user');
 
         if (token && savedUser) {
+          // ✅ FIX: Set user immediately from localStorage (optimistic)
           setUser(JSON.parse(savedUser));
           
-          // Verify token is still valid by fetching profile
+          // ✅ FIX: Verify token is still valid by fetching profile
           try {
             const response = await authAPI.getProfile();
-            setUser(response.data.user);
-            localStorage.setItem('user', JSON.stringify(response.data.user));
+            
+            // ✅ FIX: Handle different possible response structures
+            const userData = response.data.user || response.data.data || response.data;
+            
+            setUser(userData);
+            localStorage.setItem('user', JSON.stringify(userData));
             
             // Connect socket with valid token
             socketService.connect(token);
           } catch (err) {
-            // Token invalid, clear storage
-            logout();
+            // ✅ FIX: Only logout if token is actually invalid, not on network errors
+            const errorMessage = err.response?.data?.message?.toLowerCase() || '';
+            const isTokenInvalid = err.response?.status === 401 && (
+              errorMessage.includes('token expired') || 
+              errorMessage.includes('invalid token') ||
+              errorMessage.includes('jwt expired') ||
+              errorMessage.includes('no token provided')
+            );
+            
+            if (isTokenInvalid) {
+              console.warn('⚠️ Token is invalid, logging out...');
+              logout();
+            } else {
+              // Network error or other issue - keep user logged in with cached data
+              console.warn('⚠️ Could not verify token (network issue?), using cached user data');
+            }
           }
         }
       } catch (err) {
         console.error('Error loading user:', err);
+        // ✅ FIX: Don't logout on general errors
       } finally {
         setLoading(false);
       }
@@ -56,7 +76,9 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
 
       const response = await authAPI.login({ email, password });
-      const { token, user: userData } = response.data;
+      
+      // ✅ FIX: Handle different response structures
+      const { token, user: userData } = response.data.data || response.data;
 
       // Save to localStorage
       localStorage.setItem('token', token);

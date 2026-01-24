@@ -1,6 +1,7 @@
 // ============================================================================
-// Task Routes
+// Task Routes - UPDATED WITH ASSIGN FUNCTIONALITY
 // Handles task creation, updates, deletion, and retrieval
+// Author: Souleymane Camara - BIT1007326
 // ============================================================================
 
 const express = require('express');
@@ -28,6 +29,34 @@ router.post('/', authenticate, requireRole(['parent', 'spouse']), validateTaskCr
  * @query   familyId, status, category, assignedTo, priority
  */
 router.get('/', authenticate, taskController.getTasks);
+
+// ============================================================================
+// TASK ASSIGNMENT ROUTES - ✅ ADDED
+// IMPORTANT: These must come BEFORE the generic /:taskId route!
+// ============================================================================
+
+/**
+ * @route   POST /api/tasks/:taskId/assign
+ * @desc    Assign task to one or more children
+ * @access  Private/Parent/Spouse
+ * @body    { child_ids: [1, 2, 3] }
+ */
+router.post('/:taskId/assign', 
+  authenticate, 
+  requireRole(['parent', 'spouse']), 
+  taskController.assignTaskToChildren
+);
+
+/**
+ * @route   GET /api/tasks/:taskId/assignments
+ * @desc    Get all assignments for a specific task
+ * @access  Private (Family members only)
+ */
+router.get('/:taskId/assignments', authenticate, taskController.getTaskAssignments);
+
+// ============================================================================
+// TASK DETAIL ROUTES
+// ============================================================================
 
 /**
  * @route   GET /api/tasks/:taskId
@@ -58,6 +87,17 @@ router.delete('/:taskId', authenticate, requireRole(['parent', 'spouse']), taskC
 router.patch('/:taskId/status', authenticate, requireRole(['parent', 'spouse']), taskController.updateTaskStatus);
 
 /**
+ * @route   POST /api/tasks/:taskId/duplicate
+ * @desc    Duplicate a task (Parent/Spouse only)
+ * @access  Private/Parent/Spouse
+ */
+router.post('/:taskId/duplicate', authenticate, requireRole(['parent', 'spouse']), taskController.duplicateTask);
+
+// ============================================================================
+// FAMILY TASK ROUTES
+// ============================================================================
+
+/**
  * @route   GET /api/tasks/family/:familyId
  * @desc    Get all tasks for a specific family
  * @access  Private (Family members only)
@@ -78,12 +118,9 @@ router.get('/family/:familyId/active', authenticate, taskController.getActiveFam
  */
 router.get('/family/:familyId/recurring', authenticate, taskController.getRecurringTasks);
 
-/**
- * @route   POST /api/tasks/:taskId/duplicate
- * @desc    Duplicate a task (Parent/Spouse only)
- * @access  Private/Parent/Spouse
- */
-router.post('/:taskId/duplicate', authenticate, requireRole(['parent', 'spouse']), taskController.duplicateTask);
+// ============================================================================
+// STATISTICS ROUTES
+// ============================================================================
 
 /**
  * @route   GET /api/tasks/statistics/:familyId

@@ -1,6 +1,6 @@
 // ============================================================================
-// Export Routes
-// API endpoints for exporting reports to CSV and PDF
+// Export Routes - COMPLETE VERSION
+// API endpoints for exporting reports to CSV and PDF (7 Reports)
 // Author: Souleymane Camara - BIT1007326
 // ============================================================================
 
@@ -78,7 +78,7 @@ router.post(
 );
 
 // ==========================================================================
-// PDF EXPORT ROUTES
+// PDF EXPORT ROUTES - ALL 7 REPORTS
 // ==========================================================================
 
 /**
@@ -121,6 +121,62 @@ router.post(
   requireRole(['parent', 'spouse', 'admin']),
   validateExportPDF,
   exportController.exportFamilySummaryToPDF
+);
+
+/**
+ * @route   POST /api/export/pdf/reward-analytics
+ * @desc    Export reward analytics report to PDF
+ * @access  Private (Parent, Spouse, Admin)
+ * @body    { family_id, start_date, end_date, filename }
+ */
+router.post(
+  '/pdf/reward-analytics',
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
+  validateExportPDF,
+  exportController.exportRewardAnalyticsToPDF
+);
+
+/**
+ * @route   POST /api/export/pdf/parent-activity
+ * @desc    Export parent activity report to PDF
+ * @access  Private (Parent, Spouse, Admin)
+ * @body    { parent_id, family_id, start_date, end_date, filename }
+ */
+router.post(
+  '/pdf/parent-activity',
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
+  validateExportPDF,
+  exportController.exportParentActivityToPDF
+);
+
+/**
+ * @route   POST /api/export/pdf/points-distribution
+ * @desc    Export points distribution report to PDF
+ * @access  Private (Parent, Spouse, Admin)
+ * @body    { family_id, filename }
+ */
+router.post(
+  '/pdf/points-distribution',
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
+  validateExportPDF,
+  exportController.exportPointsDistributionToPDF
+);
+
+/**
+ * @route   POST /api/export/pdf/children-comparison
+ * @desc    Export children comparison report to PDF
+ * @access  Private (Parent, Spouse, Admin)
+ * @body    { family_id, start_date, end_date, filename }
+ */
+router.post(
+  '/pdf/children-comparison',
+  authenticate,
+  requireRole(['parent', 'spouse', 'admin']),
+  validateExportPDF,
+  exportController.exportChildrenComparisonToPDF
 );
 
 // ==========================================================================

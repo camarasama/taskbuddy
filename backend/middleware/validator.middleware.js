@@ -32,7 +32,8 @@ const handleValidationErrors = (req, res, next) => {
 exports.validateRegistration = [
   body('email')
     .isEmail().withMessage('Valid email is required')
-    .normalizeEmail(),
+    .trim()
+    .toLowerCase(),
   body('password')
     .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
     .matches(/\d/).withMessage('Password must contain at least one number')
@@ -53,7 +54,8 @@ exports.validateRegistration = [
 exports.validateLogin = [
   body('email')
     .isEmail().withMessage('Valid email is required')
-    .normalizeEmail(),
+    .trim()
+    .toLowerCase(),
   body('password')
     .notEmpty().withMessage('Password is required'),
   handleValidationErrors
@@ -62,7 +64,8 @@ exports.validateLogin = [
 exports.validateEmail = [
   body('email')
     .isEmail().withMessage('Valid email is required')
-    .normalizeEmail(),
+    .trim()
+    .toLowerCase(),
   handleValidationErrors
 ];
 
@@ -116,7 +119,8 @@ exports.validateFamilyUpdate = [
 exports.validateMemberAdd = [
   body('email')
     .isEmail().withMessage('Valid email is required')
-    .normalizeEmail(),
+    .trim()
+    .toLowerCase(),
   body('password')
     .isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('full_name')
@@ -142,7 +146,8 @@ exports.validateChildCreation = [
   body('email')
     .optional({ checkFalsy: true })
     .isEmail().withMessage('Valid email is required')
-    .normalizeEmail(),
+    .trim()
+    .toLowerCase(),
   body('phone_number')
     .optional({ checkFalsy: true })
     .isMobilePhone().withMessage('Valid phone number is required'),
@@ -161,7 +166,8 @@ exports.validateSpouseCreation = [
   body('email')
     .notEmpty().withMessage('Email is required')
     .isEmail().withMessage('Valid email is required')
-    .normalizeEmail(),
+    .trim()
+    .toLowerCase(),
   body('date_of_birth')
     .notEmpty().withMessage('Date of birth is required')
     .isISO8601().withMessage('Valid date of birth is required'),

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../../services/api';
 import {
@@ -14,7 +14,10 @@ import {
 export default function CreateReward() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [loadingFamily, setLoadingFamily] = useState(true);
+  const [familyId, setFamilyId] = useState(null);
   const [errors, setErrors] = useState({});
+  
   const [formData, setFormData] = useState({
     reward_name: '',
     description: '',
@@ -22,6 +25,32 @@ export default function CreateReward() {
     quantity_available: '',
     status: 'available'
   });
+
+  // ✅ Fetch family on mount
+  useEffect(() => {
+    fetchFamily();
+  }, []);
+
+  const fetchFamily = async () => {
+    try {
+      setLoadingFamily(true);
+      const familiesRes = await api.get('/families');
+      const families = familiesRes.data.data?.families || familiesRes.data.data || [];
+      
+      if (families.length === 0) {
+        setErrors({ family: 'No family found. Please create a family first.' });
+        return;
+      }
+
+      setFamilyId(families[0].family_id);
+      console.log('📋 Family loaded:', families[0].family_id);
+    } catch (err) {
+      console.error('Error fetching family:', err);
+      setErrors({ family: 'Failed to load family information' });
+    } finally {
+      setLoadingFamily(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -44,12 +73,16 @@ export default function CreateReward() {
 
     if (!formData.reward_name.trim()) {
       newErrors.reward_name = 'Reward name is required';
-    } else if (formData.reward_name.length > 100) {
-      newErrors.reward_name = 'Reward name must be 100 characters or less';
+    } else if (formData.reward_name.length < 2) {
+      newErrors.reward_name = 'Reward name must be at least 2 characters';
+    } else if (formData.reward_name.length > 255) {
+      newErrors.reward_name = 'Reward name must be 255 characters or less';
     }
 
     if (!formData.description.trim()) {
       newErrors.description = 'Description is required';
+    } else if (formData.description.length > 500) {
+      newErrors.description = 'Description must be 500 characters or less';
     }
 
     if (!formData.points_required) {
@@ -74,6 +107,10 @@ export default function CreateReward() {
       }
     }
 
+    if (!familyId) {
+      newErrors.family = 'Family information is required';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -89,41 +126,79 @@ export default function CreateReward() {
       setLoading(true);
       setErrors({});
 
+      // ✅ FIX: Include family_id in payload
       const payload = {
-        reward_name: formData.reward_name.trim(),
-        description: formData.description.trim(),
-        points_required: parseInt(formData.points_required),
-        quantity_available: parseInt(formData.quantity_available),
-        status: formData.status
+        family_id: familyId,                                      // ✅ REQUIRED
+        reward_name: formData.reward_name.trim(),                 // ✅ Required
+        description: formData.description.trim(),                 // ✅ Optional but we require it
+        points_required: parseInt(formData.points_required),      // ✅ Required
+        quantity_available: parseInt(formData.quantity_available),// ✅ Optional
+        status: formData.status                                   // ✅ Optional
       };
+
+      console.log('📤 Sending reward creation payload:', payload);
 
       const response = await api.post('/rewards', payload);
       
+      console.log('✅ Reward created:', response.data);
+
       navigate('/parent/rewards', { 
         state: { 
           message: 'Reward created successfully!',
-          rewardId: response.data.data.reward_id 
+          rewardId: response.data.data?.reward_id || response.data.data?.reward?.reward_id
         } 
       });
 
     } catch (err) {
-      console.error('Error creating reward:', err);
+      console.error('❌ Error creating reward:', err);
       
       if (err.response?.data?.errors) {
         const backendErrors = {};
-        err.response.data.errors.forEach(error => {
-          backendErrors[error.path] = error.msg;
-        });
+        if (Array.isArray(err.response.data.errors)) {
+          err.response.data.errors.forEach(error => {
+            backendErrors[error.field || error.path || error.param] = error.message || error.msg;
+          });
+        }
         setErrors(backendErrors);
       } else {
         setErrors({
-          submit: err.response?.data?.message || 'Failed to create reward'
+          submit: err.response?.data?.message || 'Failed to create reward. Please try again.'
         });
       }
     } finally {
       setLoading(false);
     }
   };
+
+  // Loading state
+  if (loadingFamily) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Family error state
+  if (errors.family) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
+          <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+          <span>{errors.family}</span>
+        </div>
+        <Link
+          to="/parent/family"
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
+        >
+          Go to Family Management
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -146,7 +221,7 @@ export default function CreateReward() {
           {/* Reward Name */}
           <div>
             <label htmlFor="reward_name" className="block text-sm font-medium text-gray-700">
-              Reward Name *
+              Reward Name <span className="text-red-500">*</span>
             </label>
             <div className="mt-1 relative">
               <Gift className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -159,22 +234,23 @@ export default function CreateReward() {
                 className={`pl-10 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
                   errors.reward_name ? 'border-red-500' : 'border-gray-300'
                 }`}
-                placeholder="e.g., Extra screen time"
-                maxLength={100}
+                placeholder="e.g., Extra screen time, Movie night, New toy"
+                maxLength={255}
+                disabled={loading}
               />
             </div>
             {errors.reward_name && (
               <p className="mt-1 text-sm text-red-600">{errors.reward_name}</p>
             )}
             <p className="mt-1 text-xs text-gray-500">
-              {formData.reward_name.length}/100 characters
+              {formData.reward_name.length}/255 characters
             </p>
           </div>
 
           {/* Description */}
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-              Description *
+              Description <span className="text-red-500">*</span>
             </label>
             <div className="mt-1 relative">
               <FileText className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
@@ -188,13 +264,15 @@ export default function CreateReward() {
                   errors.description ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="Describe the reward in detail..."
+                maxLength={500}
+                disabled={loading}
               />
             </div>
             {errors.description && (
               <p className="mt-1 text-sm text-red-600">{errors.description}</p>
             )}
             <p className="mt-1 text-xs text-gray-500">
-              Be specific about what the reward includes
+              {formData.description.length}/500 characters - Be specific about what the reward includes
             </p>
           </div>
 
@@ -203,7 +281,7 @@ export default function CreateReward() {
             {/* Points Required */}
             <div>
               <label htmlFor="points_required" className="block text-sm font-medium text-gray-700">
-                Points Required *
+                Points Required <span className="text-red-500">*</span>
               </label>
               <div className="mt-1 relative">
                 <Award className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -219,20 +297,21 @@ export default function CreateReward() {
                     errors.points_required ? 'border-red-500' : 'border-gray-300'
                   }`}
                   placeholder="e.g., 100"
+                  disabled={loading}
                 />
               </div>
               {errors.points_required && (
                 <p className="mt-1 text-sm text-red-600">{errors.points_required}</p>
               )}
               <p className="mt-1 text-xs text-gray-500">
-                Points children need to redeem this reward
+                Points children need to redeem this reward (1-10,000)
               </p>
             </div>
 
             {/* Quantity Available */}
             <div>
               <label htmlFor="quantity_available" className="block text-sm font-medium text-gray-700">
-                Quantity Available *
+                Quantity Available <span className="text-red-500">*</span>
               </label>
               <div className="mt-1 relative">
                 <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -248,13 +327,14 @@ export default function CreateReward() {
                     errors.quantity_available ? 'border-red-500' : 'border-gray-300'
                   }`}
                   placeholder="e.g., 10"
+                  disabled={loading}
                 />
               </div>
               {errors.quantity_available && (
                 <p className="mt-1 text-sm text-red-600">{errors.quantity_available}</p>
               )}
               <p className="mt-1 text-xs text-gray-500">
-                Total number of times this can be redeemed
+                Total number of times this can be redeemed (1-1,000)
               </p>
             </div>
           </div>
@@ -270,6 +350,7 @@ export default function CreateReward() {
               value={formData.status}
               onChange={handleChange}
               className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              disabled={loading}
             >
               <option value="available">Available</option>
               <option value="unavailable">Unavailable</option>
@@ -291,8 +372,8 @@ export default function CreateReward() {
           <div className="flex space-x-3 pt-4 border-t border-gray-200">
             <button
               type="submit"
-              disabled={loading}
-              className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || !familyId}
+              className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? (
                 <>
@@ -308,7 +389,7 @@ export default function CreateReward() {
             </button>
             <Link
               to="/parent/rewards"
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
             >
               Cancel
             </Link>

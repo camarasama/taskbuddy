@@ -22,7 +22,8 @@ const Navbar = ({ onMenuToggle, isSidebarOpen }) => {
   const fetchUnreadCount = async () => {
     try {
       const response = await notificationAPI.getUnreadCount();
-      setUnreadCount(response.data.count);
+      // ✅ FIXED: Access correct data structure - response.data.data.unread_count
+      setUnreadCount(response.data.data?.unread_count || 0);
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }

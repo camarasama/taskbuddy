@@ -4,7 +4,7 @@
 // ============================================================================
 
 const bcrypt = require('bcrypt');
-const pool = require('../config/database');
+const { pool } = require('../config/database');
 const { generateRandomPassword } = require('../utils/passwordGenerator');
 const emailService = require('../services/email.service');
 

@@ -7,8 +7,11 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // ✅ CRITICAL: Required for CORS to work!
+  withCredentials: true,
 });
+
+// Track if we're already redirecting to prevent multiple redirects
+let isRedirecting = false;
 
 // Request interceptor - Add auth token to requests
 api.interceptors.request.use(
@@ -51,30 +54,57 @@ api.interceptors.response.use(
       
       switch (error.response.status) {
         case 401:
-          // Unauthorized - clear token and redirect to login
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-            window.location.href = '/login';
+          // ✅ FIX: More robust token validation check
+          const errorMessage = error.response.data?.message?.toLowerCase() || '';
+          const isTokenInvalid = errorMessage.includes('token expired') || 
+                                 errorMessage.includes('invalid token') ||
+                                 errorMessage.includes('jwt expired') ||
+                                 errorMessage.includes('no token provided');
+          
+          // ✅ FIX: Only logout if token is actually invalid AND not already redirecting
+          if (isTokenInvalid && 
+              !isRedirecting && 
+              window.location.pathname !== '/login' && 
+              window.location.pathname !== '/register') {
+            
+            isRedirecting = true;
+            console.warn('⚠️ Session expired. Logging out...');
+            
+            // Clear authentication data
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            
+            // Redirect to login after a small delay
+            setTimeout(() => {
+              window.location.href = '/login';
+              // Reset the flag after redirect
+              setTimeout(() => {
+                isRedirecting = false;
+              }, 1000);
+            }, 500);
           }
           break;
+          
         case 403:
-          // Forbidden
-          console.error('Access forbidden');
+          // Forbidden - but don't logout, just log
+          console.error('Access forbidden - insufficient permissions');
           break;
+          
         case 404:
-          // Not found
+          // Not found - don't logout
           console.error('Resource not found');
           break;
+          
         case 500:
-          // Server error
+          // Server error - don't logout
           console.error('Server error');
           break;
+          
         default:
           console.error('An error occurred:', error.response.data.message);
       }
     } else if (error.request) {
-      // Request made but no response
+      // ✅ FIX: Request made but no response - DON'T logout
       console.error('❌ No response from server - Backend may not be running');
       console.error('Check that backend is running on http://localhost:5000');
       
@@ -99,9 +129,9 @@ export const authAPI = {
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
   resendVerification: (email) => api.post('/auth/resend-verification', { email }),
-  getProfile: () => api.get('/auth/me'), // ✅ FIXED: Changed from /auth/profile to /auth/me
+  getProfile: () => api.get('/auth/me'),
   updateProfile: (data) => api.put('/auth/profile', data),
-  changePassword: (data) => api.post('/auth/change-password', data), // ✅ FIXED: Changed from PUT to POST
+  changePassword: (data) => api.post('/auth/change-password', data),
   uploadAvatar: (formData) => api.post('/auth/avatar', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
@@ -111,17 +141,26 @@ export const authAPI = {
 export const familyAPI = {
   create: (data) => api.post('/families', data),
   getAll: () => api.get('/families'),
-  getById: (id) => api.get(`/families/${id}`),
-  getMyFamily: () => api.get('/families/my-family'), // ✅ NEW: Get current user's family
-  update: (id, data) => api.put(`/families/${id}`, data),
-  updateFamily: (data) => api.put('/families/update', data), // ✅ NEW: Update own family
-  delete: (id) => api.delete(`/families/${id}`),
-  getMembers: () => api.get('/families/members'), // ✅ FIXED: Simplified endpoint
-  addMember: (id, data) => api.post(`/families/${id}/members`, data),
-  addChild: (data) => api.post('/families/children', data), // ✅ FIXED: Simplified endpoint
-  addSpouse: (data) => api.post('/families/spouse', data), // ✅ FIXED: Simplified endpoint
+  getById: (familyId) => api.get(`/families/${familyId}`),
+  update: (familyId, data) => api.put(`/families/${familyId}`, data),
+  delete: (familyId) => api.delete(`/families/${familyId}`),
+  
+  // Member Management
+  getMembers: (familyId) => api.get(`/families/${familyId}/members`),
+  addMember: (familyId, data) => api.post(`/families/${familyId}/members`, data),
+  addChild: (familyId, data) => api.post(`/families/${familyId}/add-child`, data),
+  addSpouse: (familyId, data) => api.post(`/families/${familyId}/add-spouse`, data),
+  getMemberById: (familyId, userId) => api.get(`/families/${familyId}/members/${userId}`),
+  updateMember: (familyId, userId, data) => api.put(`/families/${familyId}/members/${userId}`, data),
   removeMember: (familyId, userId) => api.delete(`/families/${familyId}/members/${userId}`),
-  updateMemberRole: (familyId, userId, role) => api.put(`/families/${familyId}/members/${userId}/role`, { role }),
+  
+  // Family Operations
+  joinFamily: (data) => api.post('/families/join', data),
+  leaveFamily: (familyId) => api.post(`/families/${familyId}/leave`),
+  
+  // Family Code
+  getFamilyCode: (familyId) => api.get(`/families/${familyId}/code`),
+  regenerateFamilyCode: (familyId) => api.post(`/families/${familyId}/code/regenerate`),
 };
 
 // Task API endpoints
@@ -135,8 +174,8 @@ export const taskAPI = {
   submit: (id, formData) => api.post(`/tasks/${id}/submit`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
-  approve: (id, data) => api.put(`/assignments/${id}/approve`, data), // ✅ FIXED: assignments not tasks
-  reject: (id, data) => api.put(`/assignments/${id}/reject`, data), // ✅ FIXED: assignments not tasks
+  approve: (id, data) => api.put(`/assignments/${id}/approve`, data),
+  reject: (id, data) => api.put(`/assignments/${id}/reject`, data),
   getAssignments: (taskId) => api.get(`/tasks/${taskId}/assignments`),
   getMyTasks: () => api.get('/tasks/my-tasks'),
   getTasksByFamily: (familyId) => api.get(`/tasks/family/${familyId}`),
@@ -162,8 +201,8 @@ export const rewardAPI = {
   getById: (id) => api.get(`/rewards/${id}`),
   update: (id, data) => api.put(`/rewards/${id}`, data),
   delete: (id) => api.delete(`/rewards/${id}`),
-  request: (id, data) => api.post(`/rewards/${id}/redeem`, data), // ✅ FIXED: redeem not request
-  getRequests: (params) => api.get('/redemptions/pending', { params }), // ✅ FIXED: redemptions endpoint
+  request: (id, data) => api.post(`/rewards/${id}/redeem`, data),
+  getRequests: (params) => api.get('/redemptions/pending', { params }),
   getMyRedemptions: () => api.get('/redemptions/my-redemptions'),
   getByFamily: (familyId) => api.get(`/rewards/family/${familyId}`),
 };
@@ -174,16 +213,16 @@ export const redemptionAPI = {
   getAll: (params) => api.get('/redemptions', { params }),
   getPending: () => api.get('/redemptions/pending'),
   approve: (id, data) => api.put(`/redemptions/${id}/approve`, data),
-  deny: (id, data) => api.put(`/redemptions/${id}/deny`, data), // ✅ FIXED: deny not reject
+  deny: (id, data) => api.put(`/redemptions/${id}/deny`, data),
   getMyRedemptions: () => api.get('/redemptions/my'),
 };
 
 // Points API endpoints
 export const pointsAPI = {
   getBalance: (userId) => api.get(`/points/${userId}/balance`),
-  getMyBalance: () => api.get('/points/balance'), // ✅ NEW: Get own balance
+  getMyBalance: () => api.get('/points/balance'),
   getHistory: (userId, params) => api.get(`/points/${userId}/history`, { params }),
-  getMyHistory: (params) => api.get('/points/history', { params }), // ✅ NEW: Get own history
+  getMyHistory: (params) => api.get('/points/history', { params }),
   award: (data) => api.post('/points/award', data),
   deduct: (data) => api.post('/points/deduct', data),
   transfer: (data) => api.post('/points/transfer', data),
@@ -196,7 +235,7 @@ export const notificationAPI = {
   markAsRead: (id) => api.put(`/notifications/${id}/read`),
   markAllAsRead: () => api.put('/notifications/mark-all-read'),
   delete: (id) => api.delete(`/notifications/${id}`),
-  getUnreadCount: () => api.get('/notifications/unread-count'),
+  getUnreadCount: () => api.get('/notifications/count'),
 };
 
 // Report API endpoints

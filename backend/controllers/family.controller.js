@@ -3,7 +3,7 @@
 // Handles family creation, management, and member operations
 // ============================================================================
 
-const pool = require('../config/database');
+const { pool } = require('../config/database');
 const { generateFamilyCode } = require('../utils/helpers');
 
 // ============================================================================

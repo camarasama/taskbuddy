@@ -16,14 +16,17 @@ import ParentDashboard from './pages/parent/Dashboard';
 import TaskList from './pages/parent/tasks/TaskList';
 import CreateTask from './pages/parent/tasks/CreateTask';
 import EditTask from './pages/parent/tasks/EditTask';
+import TaskDetails from './pages/parent/tasks/TaskDetails';
+import AssignTask from './pages/parent/tasks/AssignTask';
 import TaskReview from './pages/parent/tasks/ReviewTasks';
 import RewardList from './pages/parent/rewards/RewardList';
 import CreateReward from './pages/parent/rewards/CreateReward';
 import EditReward from './pages/parent/rewards/EditReward';
+import RewardDetails from './pages/parent/rewards/RewardDetails';
 import RedemptionReview from './pages/parent/rewards/ReviewRedemptions';
 import FamilyManagement from './pages/parent/family/FamilyManagement';
-import AddFamilyMember from './pages/parent/family/AddFamilyMember';
-import Reports from './pages/parent/reports/Reports';
+import AddFamilyMember from './pages/parent/family/AddMember';
+import Reports from './pages/parent/reports/Reports'; // ✅ PDF Reports Page
 
 // Child Pages
 import ChildDashboard from './pages/child/Dashboard';
@@ -70,19 +73,22 @@ function App() {
                     <Route path="tasks" element={<TaskList />} />
                     <Route path="tasks/create" element={<CreateTask />} />
                     <Route path="tasks/edit/:taskId" element={<EditTask />} />
+                    <Route path="tasks/:taskId/assign" element={<AssignTask />} />
+                    <Route path="tasks/:taskId" element={<TaskDetails />} />
                     <Route path="tasks/review" element={<TaskReview />} />
                     
                     {/* Reward Management */}
                     <Route path="rewards" element={<RewardList />} />
                     <Route path="rewards/create" element={<CreateReward />} />
                     <Route path="rewards/edit/:rewardId" element={<EditReward />} />
+                    <Route path="rewards/:rewardId" element={<RewardDetails />} />
                     <Route path="rewards/redemptions" element={<RedemptionReview />} />
                     
                     {/* Family Management */}
                     <Route path="family" element={<FamilyManagement />} />
                     <Route path="family/add" element={<AddFamilyMember />} />
                     
-                    {/* Reports */}
+                    {/* Reports & Analytics - PDF Export System */}
                     <Route path="reports" element={<Reports />} />
                     
                     {/* Shared */}

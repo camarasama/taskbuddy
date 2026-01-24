@@ -46,6 +46,12 @@ const MemberCard = ({ member, onRemove, currentUserId }) => {
 
   const isCurrentUser = member.user_id === currentUserId;
 
+  // Split full_name into first and last name for display
+  const nameParts = (member.full_name || '').trim().split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+  const initials = `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+
   return (
     <>
       <div className="bg-white rounded-lg shadow p-6">
@@ -57,11 +63,11 @@ const MemberCard = ({ member, onRemove, currentUserId }) => {
               member.role === 'spouse' ? 'bg-purple-500' :
               'bg-green-500'
             }`}>
-              {member.first_name?.[0]}{member.last_name?.[0]}
+              {initials}
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                {member.first_name} {member.last_name}
+                {member.full_name}
                 {isCurrentUser && (
                   <span className="ml-2 text-xs text-gray-500">(You)</span>
                 )}
@@ -141,7 +147,7 @@ const MemberCard = ({ member, onRemove, currentUserId }) => {
             </div>
             
             <p className="text-sm text-gray-600 mb-4">
-              Are you sure you want to remove <strong>{member.first_name} {member.last_name}</strong> from the family?
+              Are you sure you want to remove <strong>{member.full_name}</strong> from the family?
             </p>
 
             {member.role === 'child' && (
@@ -208,7 +214,7 @@ export default function FamilyManagement() {
       
       // Fetch family info
       const familyRes = await api.get('/families');
-      const families = familyRes.data.data || [];
+      const families = familyRes.data.data.families || [];  // ✅ FIX: Access .families array
       
       if (families.length === 0) {
         setError('No family found. Please create a family first.');
@@ -218,15 +224,19 @@ export default function FamilyManagement() {
 
       const userFamily = families[0]; // Get first family (user's family)
       setFamily(userFamily);
+      console.log('📊 Family loaded:', userFamily);
 
       // Fetch family members
       const membersRes = await api.get(`/families/${userFamily.family_id}/members`);
-      setMembers(membersRes.data.data || []);
+      const fetchedMembers = membersRes.data.data.members || [];
+      console.log('👥 Members fetched:', fetchedMembers);
+      setMembers(fetchedMembers);
 
       // Fetch family code
       try {
         const codeRes = await api.get(`/families/${userFamily.family_id}/code`);
-        setFamilyCode(codeRes.data.data.invite_code);
+        setFamilyCode(codeRes.data.data.family_code);
+        console.log('🔑 Family code loaded');
       } catch (err) {
         console.log('Could not fetch family code:', err);
       }
@@ -263,7 +273,7 @@ export default function FamilyManagement() {
     try {
       setRegenerating(true);
       const response = await api.post(`/families/${family.family_id}/code/regenerate`);
-      setFamilyCode(response.data.data.invite_code);
+      setFamilyCode(response.data.data.family.family_code);
       
       setSuccessMessage('Family code regenerated successfully');
       setTimeout(() => setSuccessMessage(''), 3000);
